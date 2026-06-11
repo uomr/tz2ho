@@ -1,5 +1,9 @@
 import { Link, useLocation } from "wouter";
-import { LayoutDashboard, ScanLine, FileText, Database, ChevronRight, Sun, Moon, LogOut, Users, KeyRound, Eye, EyeOff, Cpu } from "lucide-react";
+import {
+  LayoutDashboard, ScanLine, FileText, Database,
+  ChevronRight, Sun, Moon, LogOut, Users, KeyRound,
+  Eye, EyeOff, Cpu, ShieldCheck,
+} from "lucide-react";
 import { useState, useEffect, createContext, useContext } from "react";
 import { useAuth, getAuthHeader } from "@/contexts/AuthContext";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -9,50 +13,48 @@ import { toast } from "sonner";
 
 // ── سياق الثيم ──────────────────────────────────────────────
 type Theme = "dark" | "light";
+interface ThemeContextValue { theme: Theme; toggleTheme: () => void; }
 
-interface ThemeContextValue {
-  theme: Theme;
-  toggleTheme: () => void;
-}
-
-export const ThemeContext = createContext<ThemeContextValue>({
-  theme: "dark",
-  toggleTheme: () => {},
-});
+export const ThemeContext = createContext<ThemeContextValue>({ theme: "dark", toggleTheme: () => {} });
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [theme, setTheme] = useState<Theme>(() => {
     if (typeof window === "undefined") return "dark";
     return (localStorage.getItem("rukn-theme") as Theme) ?? "dark";
   });
-
   useEffect(() => {
     const root = document.documentElement;
-    if (theme === "dark") {
-      root.classList.add("dark");
-      root.classList.remove("light");
-    } else {
-      root.classList.remove("dark");
-      root.classList.add("light");
-    }
+    if (theme === "dark") { root.classList.add("dark"); root.classList.remove("light"); }
+    else { root.classList.remove("dark"); root.classList.add("light"); }
     localStorage.setItem("rukn-theme", theme);
   }, [theme]);
-
   const toggleTheme = () => setTheme(t => (t === "dark" ? "light" : "dark"));
-
-  return (
-    <ThemeContext.Provider value={{ theme, toggleTheme }}>
-      {children}
-    </ThemeContext.Provider>
-  );
+  return <ThemeContext.Provider value={{ theme, toggleTheme }}>{children}</ThemeContext.Provider>;
 }
 
-export function useTheme() {
-  return useContext(ThemeContext);
-}
+export function useTheme() { return useContext(ThemeContext); }
 
-// ── الشريط الجانبي ──────────────────────────────────────────
-const SIDEBAR_EXPANDED = 228;
+// ── ألوان الدور ──────────────────────────────────────────────
+const ROLE_COLORS = {
+  admin: {
+    accent: "#8b5cf6",
+    dim: "#8b5cf615",
+    border: "#8b5cf630",
+    glow: "#8b5cf640",
+    gradient: "linear-gradient(135deg,#8b5cf6,#6d28d9)",
+    label: "مدير النظام",
+  },
+  employee: {
+    accent: "#10b981",
+    dim: "#10b98115",
+    border: "#10b98130",
+    glow: "#10b98140",
+    gradient: "linear-gradient(135deg,#10b981,#059669)",
+    label: "موظف",
+  },
+};
+
+const SIDEBAR_EXPANDED = 224;
 const SIDEBAR_COLLAPSED = 60;
 
 const PAGE_TITLES: Record<string, string> = {
@@ -69,8 +71,9 @@ export function Layout({ children }: { children: React.ReactNode }) {
   const { theme, toggleTheme } = useTheme();
   const { user, logout, isAdmin, token } = useAuth();
   const canParts = isAdmin || (user?.canEditParts ?? false);
+  const colors = ROLE_COLORS[isAdmin ? "admin" : "employee"];
 
-  // نافذة تغيير كلمة السر
+  // كلمة السر
   const [showPassModal, setShowPassModal] = useState(false);
   const [oldPass, setOldPass] = useState("");
   const [newPass, setNewPass] = useState("");
@@ -92,204 +95,180 @@ export function Layout({ children }: { children: React.ReactNode }) {
       const data = await res.json();
       if (!res.ok) { toast.error(data.error); return; }
       toast.success("تم تغيير كلمة السر بنجاح ✓");
-      setShowPassModal(false);
-      setOldPass(""); setNewPass("");
-    } finally {
-      setSavingPass(false);
-    }
+      setShowPassModal(false); setOldPass(""); setNewPass("");
+    } finally { setSavingPass(false); }
   };
+
   const pageTitle = PAGE_TITLES[location] || "RuknAuto";
 
   const [isCollapsed, setIsCollapsed] = useState<boolean>(() => {
     if (typeof window === "undefined") return false;
     return localStorage.getItem("rukn-sidebar-collapsed") === "true";
   });
-
-  useEffect(() => {
-    localStorage.setItem("rukn-sidebar-collapsed", String(isCollapsed));
-  }, [isCollapsed]);
+  useEffect(() => { localStorage.setItem("rukn-sidebar-collapsed", String(isCollapsed)); }, [isCollapsed]);
 
   const navItems = [
-    { href: "/", label: "لوحة التحكم", icon: LayoutDashboard },
+    { href: "/", label: "الرئيسية", icon: LayoutDashboard },
     { href: "/extract", label: "استخراج فاتورة", icon: ScanLine },
     { href: "/invoices", label: "سجل الفواتير", icon: FileText },
     ...(canParts ? [{ href: "/parts", label: "ذاكرة القطع", icon: Database }] : []),
-    ...(isAdmin ? [
-      { href: "/admin/users", label: "المستخدمون", icon: Users },
-      { href: "/admin/settings", label: "نموذج الذكاء", icon: Cpu },
-    ] : []),
   ];
+  const adminItems = isAdmin
+    ? [
+        { href: "/admin/users", label: "المستخدمون", icon: Users },
+        { href: "/admin/settings", label: "نموذج الذكاء", icon: Cpu },
+      ]
+    : [];
+
+  const fadeStyle = (show: boolean) => ({
+    opacity: show ? 1 : 0,
+    maxWidth: show ? 200 : 0,
+    overflow: "hidden" as const,
+    transition: "opacity 160ms ease, max-width 280ms cubic-bezier(0.4,0,0.2,1)",
+    whiteSpace: "nowrap" as const,
+  });
+
+  function NavItem({ href, label, icon: Icon }: { href: string; label: string; icon: any }) {
+    const isActive = location === href;
+    return (
+      <Link href={href}>
+        <span
+          title={isCollapsed ? label : undefined}
+          className="relative flex items-center gap-3 px-2.5 py-2.5 rounded-xl transition-all duration-150 cursor-pointer select-none overflow-hidden"
+          style={{
+            background: isActive ? colors.dim : "transparent",
+            border: isActive ? `1px solid ${colors.border}` : "1px solid transparent",
+            color: isActive ? colors.accent : "hsl(var(--sidebar-foreground) / 0.5)",
+          }}
+        >
+          <Icon className="w-4 h-4 shrink-0" />
+          <span className="text-[13px] font-medium" style={fadeStyle(!isCollapsed)}>{label}</span>
+          {isActive && !isCollapsed && (
+            <span className="mr-auto w-1.5 h-1.5 rounded-full shrink-0" style={{ background: colors.accent }} />
+          )}
+          {isActive && isCollapsed && (
+            <span
+              className="absolute top-1/2 -translate-y-1/2 w-0.5 h-5 rounded-full"
+              style={{ insetInlineStart: 0, background: colors.accent }}
+            />
+          )}
+        </span>
+      </Link>
+    );
+  }
 
   return (
-    <div className="flex h-screen w-full bg-background overflow-hidden" dir="rtl">
+    <div className="flex h-screen w-full overflow-hidden bg-background" dir="rtl">
       {/* ── الشريط الجانبي ── */}
       <aside
-        className="flex flex-col bg-sidebar border-l border-sidebar-border h-full shrink-0 relative"
+        className="flex flex-col h-full shrink-0"
         style={{
           width: isCollapsed ? SIDEBAR_COLLAPSED : SIDEBAR_EXPANDED,
           transition: "width 280ms cubic-bezier(0.4,0,0.2,1)",
           overflow: "hidden",
+          background: "hsl(var(--sidebar))",
+          borderLeft: "1px solid hsl(var(--sidebar-border))",
         }}
       >
         {/* الشعار */}
-        <div className="px-3 py-4 flex items-center gap-3 overflow-hidden min-w-0">
-          <div className="w-8 h-8 rounded-lg bg-primary/10 border border-primary/25 flex items-center justify-center shrink-0">
-            <ScanLine className="w-4 h-4 text-primary" />
-          </div>
+        <div className="px-3 pt-4 pb-3 flex items-center gap-2.5 overflow-hidden">
           <div
-            className="min-w-0 overflow-hidden"
-            style={{
-              opacity: isCollapsed ? 0 : 1,
-              maxWidth: isCollapsed ? 0 : 160,
-              transition: "opacity 180ms ease, max-width 280ms cubic-bezier(0.4,0,0.2,1)",
-              whiteSpace: "nowrap",
-            }}
+            className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0"
+            style={{ background: colors.gradient, boxShadow: `0 0 14px ${colors.glow}` }}
           >
-            <h1 className="font-bold text-[15px] tracking-tight text-sidebar-foreground leading-none">RuknAuto</h1>
-            <p className="text-[10px] text-sidebar-foreground/40 mt-0.5">استخراج الفواتير الذكي</p>
+            <ScanLine className="w-4 h-4 text-white" />
+          </div>
+          <div className="min-w-0" style={fadeStyle(!isCollapsed)}>
+            <h1 className="font-bold text-[14px] tracking-tight text-sidebar-foreground leading-none">RuknAuto</h1>
+            <div className="flex items-center gap-1 mt-0.5">
+              {isAdmin && <ShieldCheck className="w-2.5 h-2.5 shrink-0" style={{ color: colors.accent }} />}
+              <p className="text-[9px]" style={{ color: colors.accent }}>{colors.label}</p>
+            </div>
           </div>
         </div>
 
-        <div className="h-px bg-sidebar-border mx-3 mb-2" />
+        <div className="h-px mx-3 mb-2 bg-sidebar-border" />
 
         {/* التنقل */}
-        <nav className="flex-1 px-2 space-y-0.5 py-2">
-          {navItems.map((item) => {
-            const isActive = location === item.href;
-            const Icon = item.icon;
-            return (
-              <Link key={item.href} href={item.href}>
-                <span
-                  title={isCollapsed ? item.label : undefined}
-                  className={`relative flex items-center gap-3 px-2.5 py-2.5 rounded-lg transition-all duration-150 cursor-pointer select-none overflow-hidden ${
-                    isActive
-                      ? "bg-primary/10 text-primary font-semibold border border-primary/15"
-                      : "text-sidebar-foreground/55 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
-                  }`}
-                >
-                  <Icon className={`w-4 h-4 shrink-0 ${isActive ? "text-primary" : ""}`} />
-                  <span
-                    className="text-sm whitespace-nowrap"
-                    style={{
-                      opacity: isCollapsed ? 0 : 1,
-                      maxWidth: isCollapsed ? 0 : 200,
-                      overflow: "hidden",
-                      transition: "opacity 160ms ease, max-width 280ms cubic-bezier(0.4,0,0.2,1)",
-                    }}
-                  >
-                    {item.label}
-                  </span>
-                  {isActive && !isCollapsed && (
-                    <span className="mr-auto w-1.5 h-1.5 rounded-full bg-primary shrink-0" />
-                  )}
-                  {isActive && isCollapsed && (
-                    <span
-                      className="absolute top-1/2 -translate-y-1/2 w-0.5 h-5 bg-primary rounded-full"
-                      style={{ insetInlineStart: 0 }}
-                    />
-                  )}
-                </span>
-              </Link>
-            );
-          })}
+        <nav className="flex-1 px-2 py-1 space-y-0.5 overflow-hidden">
+          {navItems.map(item => <NavItem key={item.href} {...item} />)}
+
+          {adminItems.length > 0 && (
+            <>
+              <div className="mx-1 my-2 flex items-center gap-2" style={{ opacity: isCollapsed ? 0 : 1, transition: "opacity 160ms ease" }}>
+                <div className="flex-1 h-px bg-sidebar-border" />
+                <span className="text-[9px] font-bold tracking-widest uppercase" style={{ color: colors.accent + "80" }}>إدارة</span>
+                <div className="flex-1 h-px bg-sidebar-border" />
+              </div>
+              {adminItems.map(item => <NavItem key={item.href} {...item} />)}
+            </>
+          )}
         </nav>
 
-        <div className="h-px bg-sidebar-border mx-3" />
+        <div className="h-px mx-3 bg-sidebar-border" />
 
         {/* ثيم + طي */}
         <div className="p-2 space-y-0.5">
-          {/* الوضع الصباحي / الليلي */}
           <button
             onClick={toggleTheme}
             title={theme === "dark" ? "الوضع الصباحي" : "الوضع الليلي"}
-            className="w-full flex items-center gap-3 px-2.5 py-2 rounded-lg text-sidebar-foreground/50 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground transition-all duration-150 overflow-hidden cursor-pointer"
+            className="w-full flex items-center gap-3 px-2.5 py-2 rounded-xl text-sidebar-foreground/45 hover:bg-sidebar-accent/40 hover:text-sidebar-foreground transition-all duration-150 cursor-pointer overflow-hidden"
           >
-            {theme === "dark" ? (
-              <Sun className="w-4 h-4 shrink-0 text-amber-400/80" />
-            ) : (
-              <Moon className="w-4 h-4 shrink-0 text-blue-400/80" />
-            )}
-            <span
-              className="text-xs whitespace-nowrap"
-              style={{
-                opacity: isCollapsed ? 0 : 1,
-                maxWidth: isCollapsed ? 0 : 160,
-                overflow: "hidden",
-                transition: "opacity 160ms ease, max-width 280ms cubic-bezier(0.4,0,0.2,1)",
-              }}
-            >
+            {theme === "dark"
+              ? <Sun className="w-4 h-4 shrink-0 text-amber-400/80" />
+              : <Moon className="w-4 h-4 shrink-0 text-blue-400/80" />}
+            <span className="text-xs" style={fadeStyle(!isCollapsed)}>
               {theme === "dark" ? "الوضع الصباحي" : "الوضع الليلي"}
             </span>
           </button>
-
-          {/* طي / توسيع القائمة */}
           <button
             onClick={() => setIsCollapsed(c => !c)}
             title={isCollapsed ? "توسيع القائمة" : "طي القائمة"}
-            className="w-full flex items-center gap-3 px-2.5 py-2 rounded-lg text-sidebar-foreground/35 hover:bg-sidebar-accent/40 hover:text-sidebar-foreground/70 transition-all duration-150 overflow-hidden cursor-pointer"
+            className="w-full flex items-center gap-3 px-2.5 py-2 rounded-xl text-sidebar-foreground/30 hover:bg-sidebar-accent/30 hover:text-sidebar-foreground/60 transition-all duration-150 cursor-pointer overflow-hidden"
           >
             <ChevronRight
               className="w-4 h-4 shrink-0 transition-transform duration-300"
               style={{ transform: isCollapsed ? "rotate(180deg)" : "rotate(0deg)" }}
             />
-            <span
-              className="text-xs whitespace-nowrap"
-              style={{
-                opacity: isCollapsed ? 0 : 1,
-                maxWidth: isCollapsed ? 0 : 160,
-                overflow: "hidden",
-                transition: "opacity 160ms ease, max-width 280ms cubic-bezier(0.4,0,0.2,1)",
-              }}
-            >
-              طي القائمة
-            </span>
+            <span className="text-xs" style={fadeStyle(!isCollapsed)}>طي القائمة</span>
           </button>
         </div>
 
-        {/* المستخدم + تسجيل خروج */}
+        {/* المستخدم */}
         <div className="p-3 border-t border-sidebar-border overflow-hidden">
-          <div className="flex items-center gap-2.5 px-0.5 overflow-hidden min-w-0">
-            <div
-              className="w-7 h-7 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0"
-              title={isCollapsed ? (user?.displayName || "مستخدم") : undefined}
-            >
-              <span className="text-[11px] font-bold text-primary">
+          <div className="rounded-xl p-2.5" style={{ background: colors.dim, border: `1px solid ${colors.border}` }}>
+            <div className="flex items-center gap-2 min-w-0 mb-2">
+              <div
+                className="w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-bold text-white shrink-0"
+                style={{ background: colors.gradient }}
+              >
                 {user?.displayName?.[0] || "م"}
-              </span>
+              </div>
+              <div className="min-w-0 flex-1" style={fadeStyle(!isCollapsed)}>
+                <p className="text-xs font-semibold text-sidebar-foreground truncate">{user?.displayName || "مستخدم"}</p>
+                <p className="text-[9px] truncate" style={{ color: colors.accent }}>{colors.label}</p>
+              </div>
             </div>
-            <div
-              className="min-w-0 flex-1 overflow-hidden"
-              style={{
-                opacity: isCollapsed ? 0 : 1,
-                maxWidth: isCollapsed ? 0 : 130,
-                transition: "opacity 160ms ease, max-width 280ms cubic-bezier(0.4,0,0.2,1)",
-                whiteSpace: "nowrap",
-              }}
-            >
-              <p className="text-xs font-semibold text-sidebar-foreground truncate">{user?.displayName || "مستخدم"}</p>
-              <p className="text-[10px] text-sidebar-foreground/35 truncate">{user?.role === "admin" ? "مدير النظام" : "موظف"}</p>
+            <div className="flex gap-1.5" style={{ opacity: isCollapsed ? 0 : 1, transition: "opacity 160ms ease" }}>
+              <button
+                onClick={() => setShowPassModal(true)}
+                className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-[11px] font-medium bg-sidebar-accent/50 text-sidebar-foreground/60 hover:text-sidebar-foreground transition-colors"
+              >
+                <KeyRound className="w-3 h-3" />
+                <span>كلمة السر</span>
+              </button>
+              <button
+                onClick={logout}
+                title="تسجيل الخروج"
+                className="flex items-center justify-center p-1.5 rounded-lg bg-sidebar-accent/50 text-red-400/70 hover:text-red-400 hover:bg-red-400/10 transition-colors"
+              >
+                <LogOut className="w-3.5 h-3.5" />
+              </button>
             </div>
-            {/* تغيير كلمة السر */}
-            <button
-              onClick={() => setShowPassModal(true)}
-              title="تغيير كلمة السر"
-              className="shrink-0 p-1 rounded text-sidebar-foreground/25 hover:text-primary hover:bg-primary/10 transition-colors"
-              style={{ opacity: isCollapsed ? 0 : 1, transition: "opacity 160ms ease" }}
-            >
-              <KeyRound className="w-3.5 h-3.5" />
-            </button>
-            <button
-              onClick={logout}
-              title="تسجيل الخروج"
-              className="shrink-0 p-1 rounded text-sidebar-foreground/30 hover:text-red-400 hover:bg-red-400/10 transition-colors"
-              style={{ opacity: isCollapsed ? 0 : 1, transition: "opacity 160ms ease" }}
-            >
-              <LogOut className="w-3.5 h-3.5" />
-            </button>
           </div>
         </div>
 
-        {/* نافذة تغيير كلمة السر */}
+        {/* نافذة كلمة السر */}
         <Dialog open={showPassModal} onOpenChange={setShowPassModal}>
           <DialogContent className="max-w-sm bg-card border-border rounded-xl" dir="rtl">
             <DialogHeader className="border-b border-border pb-4">
@@ -328,29 +307,24 @@ export function Layout({ children }: { children: React.ReactNode }) {
         </Dialog>
       </aside>
 
-      {/* ── المحتوى الرئيسي ── */}
+      {/* ── المحتوى ── */}
       <main className="flex-1 flex flex-col h-full overflow-hidden min-w-0">
-        {/* شريط العنوان */}
-        <header
-          className="flex items-center px-6 border-b border-border bg-card/50 shrink-0 gap-3"
-          style={{ height: "52px" }}
-        >
-          <div className="flex items-center gap-1.5">
-            <span className="text-muted-foreground/50 text-xs">RuknAuto</span>
-            <ChevronRight
-              className="w-3 h-3 text-muted-foreground/30 shrink-0"
-              style={{ transform: "rotate(180deg)" }}
-            />
+        <header className="flex items-center px-6 shrink-0 gap-3 bg-card/50 border-b border-border" style={{ height: "52px" }}>
+          <div className="flex items-center gap-1.5 text-xs">
+            <span className="text-muted-foreground/40">RuknAuto</span>
+            <ChevronRight className="w-3 h-3 text-muted-foreground/30 shrink-0" style={{ transform: "rotate(180deg)" }} />
+            {isAdmin && <ShieldCheck className="w-3 h-3 shrink-0" style={{ color: colors.accent }} />}
             <span className="font-semibold text-foreground text-sm">{pageTitle}</span>
           </div>
           <div className="flex-1" />
-          <div className="flex items-center gap-2">
-            <span className="text-[10px] text-muted-foreground/40 hidden sm:block font-mono">NewPoint ERP</span>
-            <div className="w-1.5 h-1.5 rounded-full bg-green-500/60 shrink-0" title="متصل" />
+          <div
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium"
+            style={{ background: "#10b98112", border: "1px solid #10b98128", color: "#10b981" }}
+          >
+            <span className="w-1.5 h-1.5 rounded-full bg-green-500 shrink-0" />
+            <span className="hidden sm:block">NewPoint ERP متصل</span>
           </div>
         </header>
-
-        {/* المحتوى */}
         <div className="flex-1 overflow-auto p-6 bg-background">
           <div className="max-w-7xl mx-auto">{children}</div>
         </div>
