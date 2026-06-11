@@ -1,0 +1,377 @@
+openapi: 3.1.0
+info:
+  title: Api
+  version: 0.1.0
+  description: RuknAuto Invoice Extraction API
+servers:
+  - url: /api
+    description: Base API path
+tags:
+  - name: health
+    description: Health operations
+  - name: invoices
+    description: Invoice extraction and management
+  - name: parts
+    description: Parts memory management
+  - name: stats
+    description: Statistics and analytics
+
+paths:
+  /healthz:
+    get:
+      operationId: healthCheck
+      tags: [health]
+      summary: Health check
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+
+  /invoices:
+    get:
+      operationId: listInvoices
+      tags: [invoices]
+      summary: List all invoices
+      responses:
+        "200":
+          description: List of invoices
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Invoice"
+
+  /invoices/extract:
+    post:
+      operationId: extractInvoice
+      tags: [invoices]
+      summary: Extract invoice data from uploaded image
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ExtractInvoiceInput"
+      responses:
+        "200":
+          description: Extracted invoice data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExtractedInvoice"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Extraction failed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /invoices/{id}:
+    get:
+      operationId: getInvoice
+      tags: [invoices]
+      summary: Get invoice by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Invoice details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Invoice"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    delete:
+      operationId: deleteInvoice
+      tags: [invoices]
+      summary: Delete invoice
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  /invoices/{id}/save:
+    post:
+      operationId: saveInvoice
+      tags: [invoices]
+      summary: Save extracted invoice to database
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SaveInvoiceInput"
+      responses:
+        "200":
+          description: Saved invoice
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Invoice"
+
+  /parts:
+    get:
+      operationId: listParts
+      tags: [parts]
+      summary: List all parts in memory
+      responses:
+        "200":
+          description: Parts list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Part"
+    post:
+      operationId: createPart
+      tags: [parts]
+      summary: Add or update a part mapping
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PartInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Part"
+
+  /parts/{id}:
+    delete:
+      operationId: deletePart
+      tags: [parts]
+      summary: Delete a part mapping
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  /stats:
+    get:
+      operationId: getStats
+      tags: [stats]
+      summary: Get dashboard statistics
+      responses:
+        "200":
+          description: Stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Stats"
+
+components:
+  schemas:
+    HealthStatus:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+
+    ErrorResponse:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: string
+
+    InvoiceItem:
+      type: object
+      required: [description, quantity, unitCost]
+      properties:
+        id:
+          type: integer
+        partNumber:
+          type: ["string", "null"]
+        description:
+          type: string
+        quantity:
+          type: number
+        unit:
+          type: ["string", "null"]
+        unitCost:
+          type: number
+        total:
+          type: number
+        memoryMatch:
+          type: boolean
+        memoryConfidence:
+          type: ["number", "null"]
+        needsManualInput:
+          type: boolean
+        originalPartNumber:
+          type: ["string", "null"]
+        packFactor:
+          type: integer
+
+    Invoice:
+      type: object
+      required: [id, status, createdAt]
+      properties:
+        id:
+          type: integer
+        invoiceNumber:
+          type: ["string", "null"]
+        supplier:
+          type: ["string", "null"]
+        date:
+          type: ["string", "null"]
+        status:
+          type: string
+        imageBase64:
+          type: ["string", "null"]
+        totalAmount:
+          type: ["number", "null"]
+        itemCount:
+          type: ["integer", "null"]
+        createdAt:
+          type: string
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/InvoiceItem"
+
+    ExtractInvoiceInput:
+      type: object
+      required: [imageBase64, mimeType]
+      properties:
+        imageBase64:
+          type: string
+        mimeType:
+          type: string
+        model:
+          type: string
+
+    ExtractedInvoice:
+      type: object
+      required: [invoiceId, items]
+      properties:
+        invoiceId:
+          type: integer
+        invoiceNumber:
+          type: ["string", "null"]
+        supplier:
+          type: ["string", "null"]
+        date:
+          type: ["string", "null"]
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/InvoiceItem"
+
+    SaveInvoiceInput:
+      type: object
+      required: [items]
+      properties:
+        invoiceNumber:
+          type: string
+        supplier:
+          type: string
+        date:
+          type: string
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/InvoiceItem"
+
+    Part:
+      type: object
+      required: [id, description, partNumber, usageCount, createdAt]
+      properties:
+        id:
+          type: integer
+        description:
+          type: string
+        partNumber:
+          type: string
+        originalPartNumber:
+          type: ["string", "null"]
+        packFactor:
+          type: integer
+        usageCount:
+          type: integer
+        createdAt:
+          type: string
+
+    PartInput:
+      type: object
+      required: [description, partNumber]
+      properties:
+        description:
+          type: string
+        partNumber:
+          type: string
+        originalPartNumber:
+          type: ["string", "null"]
+        packFactor:
+          type: integer
+
+    Stats:
+      type: object
+      required: [totalInvoices, totalParts, totalItemsExtracted, successRate, recentActivity]
+      properties:
+        totalInvoices:
+          type: integer
+        totalParts:
+          type: integer
+        totalItemsExtracted:
+          type: integer
+        successRate:
+          type: number
+        recentActivity:
+          type: array
+          items:
+            $ref: "#/components/schemas/ActivityItem"
+
+    ActivityItem:
+      type: object
+      required: [id, type, description, createdAt]
+      properties:
+        id:
+          type: integer
+        type:
+          type: string
+        description:
+          type: string
+        createdAt:
+          type: string

@@ -1,0 +1,21 @@
+{
+  "openrouter_api_key": "your_openrouter_api_key_here",
+  "vision_model": "google/gemini-2.5-flash",
+  "erp_window_keyword": "New Point",
+  "timing": {
+    "char_interval": 0.1,
+    "num_interval": 0.06,
+    "search_wait": 1.5,
+    "after_enter": 0.8,
+    "tab_delay": 0.3,
+    "row_settle": 1.0,
+    "countdown_seconds": 7
+  },
+  "tab_order": {
+    "tabs_to_quantity": 0,
+    "tabs_to_price": 1,
+    "tabs_after_price_to_next_row": 6
+  },
+  "step_mode": false,
+  "confirm_every_part": true
+}
