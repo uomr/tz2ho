@@ -9,10 +9,13 @@ const JWT_SECRET = process.env.SESSION_SECRET || "ruknauto-secret-change-me";
 export interface AuthPayload {
   userId: number;
   username: string;
-  role: string;
+  role: string;          // "admin" | "employee" | "superadmin"
   department: string;
   displayName: string;
-  canEditParts: boolean; // ← صلاحية تعديل ذاكرة القطع
+  canEditParts: boolean;
+  orgId: number | null;  // null للـ superadmin
+  orgName?: string;
+  orgPlan?: string;
 }
 
 declare global {
@@ -55,11 +58,22 @@ export function requireAuth(req: Request, res: Response, next: NextFunction): vo
   next();
 }
 
-/** Middleware: مدير فقط */
+/** Middleware: مدير المنظمة فقط (admin أو superadmin) */
 export function requireAdmin(req: Request, res: Response, next: NextFunction): void {
   requireAuth(req, res, () => {
-    if (req.user?.role !== "admin") {
+    if (req.user?.role !== "admin" && req.user?.role !== "superadmin") {
       res.status(403).json({ error: "هذه العملية تتطلب صلاحيات المدير" });
+      return;
+    }
+    next();
+  });
+}
+
+/** Middleware: superadmin المنصة فقط */
+export function requireSuperAdmin(req: Request, res: Response, next: NextFunction): void {
+  requireAuth(req, res, () => {
+    if (req.user?.role !== "superadmin") {
+      res.status(403).json({ error: "صلاحية مدير المنصة مطلوبة" });
       return;
     }
     next();

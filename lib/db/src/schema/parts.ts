@@ -25,6 +25,7 @@ export const partsTable = pgTable("parts", {
   usageCount: integer("usage_count").notNull().default(0),
   deptUsage: jsonb("dept_usage").$type<Record<string, number>>().default({}).notNull(),
   embedding: vector("embedding", { dimensions: 768 } as any),
+  orgId: integer("org_id"),           // FK to organizations.id
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 

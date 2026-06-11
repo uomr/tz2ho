@@ -2,7 +2,7 @@ import { Link, useLocation } from "wouter";
 import {
   LayoutDashboard, ScanLine, FileText, Database,
   ChevronRight, Sun, Moon, LogOut, Users, KeyRound,
-  Eye, EyeOff, Cpu, ShieldCheck, ChevronDown, BarChart3,
+  Eye, EyeOff, Cpu, ShieldCheck, ChevronDown, BarChart3, Shield,
 } from "lucide-react";
 import { useState, useEffect, createContext, useContext } from "react";
 import { useAuth, getAuthHeader } from "@/contexts/AuthContext";
@@ -46,8 +46,9 @@ export function useTheme() { return useContext(ThemeContext); }
 
 // ── ألوان الدور ──────────────────────────────────────────────
 const ROLE = {
-  admin:    { accent: "#8b5cf6", dim: "#8b5cf614", border: "#8b5cf628", gradient: "linear-gradient(135deg,#8b5cf6,#6d28d9)", label: "مدير النظام" },
-  employee: { accent: "#10b981", dim: "#10b98114", border: "#10b98128", gradient: "linear-gradient(135deg,#10b981,#059669)", label: "موظف" },
+  admin:      { accent: "#8b5cf6", dim: "#8b5cf614", border: "#8b5cf628", gradient: "linear-gradient(135deg,#8b5cf6,#6d28d9)", label: "مدير النظام" },
+  employee:   { accent: "#10b981", dim: "#10b98114", border: "#10b98128", gradient: "linear-gradient(135deg,#10b981,#059669)", label: "موظف" },
+  superadmin: { accent: "#f59e0b", dim: "#f59e0b14", border: "#f59e0b28", gradient: "linear-gradient(135deg,#f59e0b,#d97706)", label: "مدير المنصة" },
 };
 
 const PAGE_TITLES: Record<string, string> = {
@@ -66,9 +67,10 @@ const SIDEBAR_COLLAPSED = 56;
 export function Layout({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
   const { theme, toggleTheme } = useTheme();
-  const { user, logout, isAdmin, token } = useAuth();
+  const { user, logout, isAdmin, isSuperAdmin, token } = useAuth();
   const canParts = isAdmin || (user?.canEditParts ?? false);
-  const colors = ROLE[isAdmin ? "admin" : "employee"];
+  const roleKey = isSuperAdmin ? "superadmin" : (isAdmin ? "admin" : "employee");
+  const colors = ROLE[roleKey];
 
   // طي الشريط
   const [isCollapsed, setIsCollapsed] = useState<boolean>(() =>
@@ -116,9 +118,12 @@ export function Layout({ children }: { children: React.ReactNode }) {
     { href: "/admin/users",    label: "المستخدمون",    icon: Users },
     { href: "/admin/settings", label: "نموذج الذكاء", icon: Cpu },
   ] : [];
+  const superAdminItems = isSuperAdmin ? [
+    { href: "/super-admin", label: "لوحة المنصة", icon: Shield },
+  ] : [];
 
   const initials = user?.displayName?.[0] || "م";
-  const pageTitle = PAGE_TITLES[location] || "RuknAuto";
+  const pageTitle = PAGE_TITLES[location] || (isSuperAdmin && location === "/super-admin" ? "لوحة المنصة" : "RuknAuto");
 
   // مساعد: تلاشي + طي نصي
   const fadeStyle = (visible: boolean): React.CSSProperties => ({
@@ -205,6 +210,19 @@ export function Layout({ children }: { children: React.ReactNode }) {
                 <div className="flex-1 h-px bg-sidebar-border" />
               </div>
               {adminItems.map(item => <NavItem key={item.href} {...item} />)}
+            </>
+          )}
+          {superAdminItems.length > 0 && (
+            <>
+              <div
+                className="mx-1 my-2 flex items-center gap-2"
+                style={{ opacity: isCollapsed ? 0 : 1, transition: "opacity 160ms ease", pointerEvents: isCollapsed ? "none" : "auto" }}
+              >
+                <div className="flex-1 h-px bg-sidebar-border" />
+                <span className="text-[9px] font-bold tracking-widest uppercase" style={{ color: "#f59e0b80" }}>المنصة</span>
+                <div className="flex-1 h-px bg-sidebar-border" />
+              </div>
+              {superAdminItems.map(item => <NavItem key={item.href} {...item} />)}
             </>
           )}
         </nav>

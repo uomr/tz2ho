@@ -4,7 +4,7 @@
 import { Router, type IRouter } from "express";
 import bcrypt from "bcryptjs";
 import { db } from "@workspace/db";
-import { usersTable } from "@workspace/db";
+import { usersTable, organizationsTable } from "@workspace/db";
 import { eq, sql } from "drizzle-orm";
 import { signToken, requireAuth } from "../middlewares/auth.js";
 import { logger } from "../lib/logger.js";
@@ -67,32 +67,53 @@ router.post("/auth/login", async (req, res): Promise<void> => {
     return;
   }
 
-  // تحديث وقت آخر دخول
-  await db
-    .update(usersTable)
-    .set({ lastLogin: sql`now()` })
-    .where(eq(usersTable.id, user.id));
+  // جلب بيانات المنظمة إذا وُجدت
+  let org: { id: number; name: string; plan: string; status: string } | null = null;
+  if (user.orgId) {
+    const [o] = await db
+      .select({ id: organizationsTable.id, name: organizationsTable.name, plan: organizationsTable.plan, status: organizationsTable.status })
+      .from(organizationsTable)
+      .where(eq(organizationsTable.id, user.orgId))
+      .limit(1);
+    org = o ?? null;
+
+    // تحقق من تعليق المنظمة
+    if (org?.status === "suspended") {
+      res.status(403).json({ error: "تم تعليق حساب شركتك. تواصل مع الدعم." });
+      return;
+    }
+  }
+
+  await db.update(usersTable).set({ lastLogin: sql`now()` }).where(eq(usersTable.id, user.id));
+
+  const canEditParts = user.role === "admin" || user.role === "superadmin" ? true : (user.canEditParts ?? false);
 
   const token = signToken({
-    userId: user.id,
-    username: user.username,
-    role: user.role,
-    department: user.department,
+    userId:      user.id,
+    username:    user.username,
+    role:        user.role,
+    department:  user.department,
     displayName: user.displayName,
-    canEditParts: user.role === "admin" ? true : (user.canEditParts ?? false),
+    canEditParts,
+    orgId:       user.orgId ?? null,
+    orgName:     org?.name,
+    orgPlan:     org?.plan,
   });
 
-  logger.info({ userId: user.id, username: user.username }, "User logged in");
+  logger.info({ userId: user.id, username: user.username, orgId: user.orgId }, "User logged in");
 
   res.json({
     token,
     user: {
-      id: user.id,
-      username: user.username,
+      id:          user.id,
+      username:    user.username,
       displayName: user.displayName,
-      role: user.role,
-      department: user.department,
-      canEditParts: user.role === "admin" ? true : (user.canEditParts ?? false),
+      role:        user.role,
+      department:  user.department,
+      canEditParts,
+      orgId:       user.orgId ?? null,
+      orgName:     org?.name ?? null,
+      orgPlan:     org?.plan ?? null,
     },
   });
 });

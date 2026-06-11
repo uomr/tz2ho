@@ -8,9 +8,12 @@ export interface AuthUser {
   id: number;
   username: string;
   displayName: string;
-  role: "admin" | "employee";
+  role: "admin" | "employee" | "superadmin";
   department: string;
   canEditParts: boolean;
+  orgId: number | null;
+  orgName?: string | null;
+  orgPlan?: string | null;
 }
 
 interface AuthContextValue {
@@ -19,6 +22,7 @@ interface AuthContextValue {
   login: (token: string, user: AuthUser) => void;
   logout: () => void;
   isAdmin: boolean;
+  isSuperAdmin: boolean;
 }
 
 const AuthContext = createContext<AuthContextValue>({
@@ -27,6 +31,7 @@ const AuthContext = createContext<AuthContextValue>({
   login: () => {},
   logout: () => {},
   isAdmin: false,
+  isSuperAdmin: false,
 });
 
 const TOKEN_KEY = "ruknauto_token";
@@ -55,7 +60,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, token, login, logout, isAdmin: user?.role === "admin" }}>
+    <AuthContext.Provider value={{
+      user, token, login, logout,
+      isAdmin: user?.role === "admin" || user?.role === "superadmin",
+      isSuperAdmin: user?.role === "superadmin",
+    }}>
       {children}
     </AuthContext.Provider>
   );

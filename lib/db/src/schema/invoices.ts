@@ -13,8 +13,9 @@ export const invoicesTable = pgTable("invoices", {
   totalAmount: real("total_amount"),
   itemCount: integer("item_count"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
-  createdBy: integer("created_by"),   // FK to users.id — من أدخل الفاتورة
-  department: text("department"),     // قسم المستخدم وقت الإدخال
+  createdBy: integer("created_by"),
+  department: text("department"),
+  orgId: integer("org_id"),           // FK to organizations.id
 });
 
 export const invoiceItemsTable = pgTable("invoice_items", {

@@ -112,13 +112,16 @@ router.post("/invoices/extract", async (req, res): Promise<void> => {
     .insert(invoicesTable)
     .values({
       invoiceNumber: extractedData.invoiceNumber || null,
-      supplier: extractedData.supplier || null,
-      date: extractedData.date || null,
-      status: "pending",
-      imageBase64: legacyBase64,
+      supplier:      extractedData.supplier || null,
+      date:          extractedData.date || null,
+      status:        "pending",
+      imageBase64:   legacyBase64,
       imageUrl,
       totalAmount,
-      itemCount: enrichedItems.length,
+      itemCount:     enrichedItems.length,
+      createdBy:     req.user?.userId ?? null,
+      department:    req.user?.department ?? null,
+      orgId:         req.user?.orgId ?? null,
     })
     .returning();
 

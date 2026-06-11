@@ -13,9 +13,11 @@ import Extract from "@/pages/extract";
 import Invoices from "@/pages/invoices";
 import Parts from "@/pages/parts";
 import Login from "@/pages/login";
+import Register from "@/pages/register";
 import AdminUsers from "@/pages/admin-users";
 import AdminSettings from "@/pages/admin-settings";
 import Analytics from "@/pages/analytics";
+import SuperAdmin from "@/pages/super-admin";
 
 // ربط الـ token بـ api-client-react — يُرفق تلقائياً في كل طلب
 setAuthTokenGetter(() => localStorage.getItem("ruknauto_token"));
@@ -33,7 +35,7 @@ const queryClient = new QueryClient({
 });
 
 function Router() {
-  const { user, isAdmin, logout } = useAuth();
+  const { user, isAdmin, isSuperAdmin, logout } = useAuth();
   const canParts = isAdmin || (user?.canEditParts ?? false);
 
   // تسجيل خروج تلقائي عند انتهاء صلاحية الجلسة (401)
@@ -49,9 +51,14 @@ function Router() {
     return unsub;
   }, [logout]);
 
-  // غير مسجّل → صفحة الدخول
+  // غير مسجّل → صفحة الدخول أو التسجيل
   if (!user) {
-    return <Login />;
+    return (
+      <Switch>
+        <Route path="/register" component={Register} />
+        <Route component={Login} />
+      </Switch>
+    );
   }
 
   return (
@@ -71,6 +78,10 @@ function Router() {
           {isAdmin ? <AdminSettings /> : <Redirect to="/" />}
         </Route>
         <Route path="/analytics" component={Analytics} />
+        {/* super admin — مدير المنصة */}
+        <Route path="/super-admin">
+          {isSuperAdmin ? <SuperAdmin /> : <Redirect to="/" />}
+        </Route>
         <Route component={NotFound} />
       </Switch>
     </Layout>

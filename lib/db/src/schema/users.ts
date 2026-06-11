@@ -1,4 +1,4 @@
-import { pgTable, serial, text, boolean, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, boolean, timestamp, integer } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
@@ -14,7 +14,8 @@ export const usersTable = pgTable("users", {
   role: text("role").notNull().default("employee"),    // "admin" | "employee"
   department: text("department").notNull().default("general"), // DEPARTMENTS
   isActive: boolean("is_active").notNull().default(true),
-  canEditParts: boolean("can_edit_parts").notNull().default(false), // صلاحية تعديل ذاكرة القطع
+  canEditParts: boolean("can_edit_parts").notNull().default(false),
+  orgId: integer("org_id"),   // FK to organizations.id — null للـ superadmin
   createdAt: timestamp("created_at").defaultNow().notNull(),
   lastLogin: timestamp("last_login"),
 });
