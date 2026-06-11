@@ -8,6 +8,11 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel,
+  AlertDialogContent, AlertDialogDescription,
+  AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 export default function Invoices() {
   const { data: invoices, isLoading } = useListInvoices({
@@ -16,6 +21,7 @@ export default function Invoices() {
   const deleteInvoice = useDeleteInvoice();
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
+  const [deleteConfirmId, setDeleteConfirmId] = useState<number | null>(null);
 
   // Details Modal & Injection State
   const [selectedInvoice, setSelectedInvoice] = useState<any | null>(null);
@@ -68,15 +74,19 @@ export default function Invoices() {
   }, [injectStatus, countdown]);
 
   const handleDelete = (id: number) => {
-    if (confirm('هل أنت متأكد من حذف هذه الفاتورة؟')) {
-      deleteInvoice.mutate({ id }, {
-        onSuccess: () => {
-          toast.success('تم الحذف بنجاح');
-          queryClient.invalidateQueries({ queryKey: getListInvoicesQueryKey() });
-        },
-        onError: () => toast.error('حدث خطأ أثناء الحذف')
-      });
-    }
+    setDeleteConfirmId(id);
+  };
+
+  const confirmDelete = () => {
+    if (deleteConfirmId == null) return;
+    deleteInvoice.mutate({ id: deleteConfirmId }, {
+      onSuccess: () => {
+        toast.success("تم حذف الفاتورة بنجاح");
+        setDeleteConfirmId(null);
+        queryClient.invalidateQueries({ queryKey: getListInvoicesQueryKey() });
+      },
+      onError: () => { toast.error("حدث خطأ أثناء الحذف"); setDeleteConfirmId(null); },
+    });
   };
 
   // ── فتح نافذة تعديل الفاتورة ──
@@ -1304,6 +1314,30 @@ export default function Invoices() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* ── تأكيد حذف الفاتورة ── */}
+      <AlertDialog open={deleteConfirmId != null} onOpenChange={open => !open && setDeleteConfirmId(null)}>
+        <AlertDialogContent className="max-w-sm rounded-2xl border-border bg-card" dir="rtl">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 text-base">
+              <Trash2 className="w-4 h-4 text-red-400" />
+              حذف الفاتورة
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-sm text-muted-foreground">
+              هل تريد حذف هذه الفاتورة نهائياً؟ لا يمكن التراجع عن هذا الإجراء.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex gap-2 flex-row-reverse">
+            <AlertDialogCancel className="flex-1 rounded-xl">إلغاء</AlertDialogCancel>
+            <AlertDialogAction
+              className="flex-1 rounded-xl bg-red-500 hover:bg-red-600 text-white"
+              onClick={confirmDelete}
+            >
+              حذف
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

@@ -2,10 +2,19 @@ import { Link, useLocation } from "wouter";
 import {
   LayoutDashboard, ScanLine, FileText, Database,
   ChevronRight, Sun, Moon, LogOut, Users, KeyRound,
-  Eye, EyeOff, Cpu, ShieldCheck,
+  Eye, EyeOff, Cpu, ShieldCheck, ChevronDown,
 } from "lucide-react";
 import { useState, useEffect, createContext, useContext } from "react";
 import { useAuth, getAuthHeader } from "@/contexts/AuthContext";
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem,
+  DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel,
+  AlertDialogContent, AlertDialogDescription,
+  AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -14,7 +23,6 @@ import { toast } from "sonner";
 // ── سياق الثيم ──────────────────────────────────────────────
 type Theme = "dark" | "light";
 interface ThemeContextValue { theme: Theme; toggleTheme: () => void; }
-
 export const ThemeContext = createContext<ThemeContextValue>({ theme: "dark", toggleTheme: () => {} });
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
@@ -28,34 +36,19 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     else { root.classList.remove("dark"); root.classList.add("light"); }
     localStorage.setItem("rukn-theme", theme);
   }, [theme]);
-  const toggleTheme = () => setTheme(t => (t === "dark" ? "light" : "dark"));
-  return <ThemeContext.Provider value={{ theme, toggleTheme }}>{children}</ThemeContext.Provider>;
+  return (
+    <ThemeContext.Provider value={{ theme, toggleTheme: () => setTheme(t => t === "dark" ? "light" : "dark") }}>
+      {children}
+    </ThemeContext.Provider>
+  );
 }
-
 export function useTheme() { return useContext(ThemeContext); }
 
 // ── ألوان الدور ──────────────────────────────────────────────
-const ROLE_COLORS = {
-  admin: {
-    accent: "#8b5cf6",
-    dim: "#8b5cf615",
-    border: "#8b5cf630",
-    glow: "#8b5cf640",
-    gradient: "linear-gradient(135deg,#8b5cf6,#6d28d9)",
-    label: "مدير النظام",
-  },
-  employee: {
-    accent: "#10b981",
-    dim: "#10b98115",
-    border: "#10b98130",
-    glow: "#10b98140",
-    gradient: "linear-gradient(135deg,#10b981,#059669)",
-    label: "موظف",
-  },
+const ROLE = {
+  admin:    { accent: "#8b5cf6", dim: "#8b5cf614", border: "#8b5cf628", gradient: "linear-gradient(135deg,#8b5cf6,#6d28d9)", label: "مدير النظام" },
+  employee: { accent: "#10b981", dim: "#10b98114", border: "#10b98128", gradient: "linear-gradient(135deg,#10b981,#059669)", label: "موظف" },
 };
-
-const SIDEBAR_EXPANDED = 224;
-const SIDEBAR_COLLAPSED = 60;
 
 const PAGE_TITLES: Record<string, string> = {
   "/": "لوحة التحكم",
@@ -66,20 +59,32 @@ const PAGE_TITLES: Record<string, string> = {
   "/admin/settings": "إعدادات الذكاء الاصطناعي",
 };
 
+const SIDEBAR_EXPANDED = 224;
+const SIDEBAR_COLLAPSED = 56;
+
 export function Layout({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
   const { theme, toggleTheme } = useTheme();
   const { user, logout, isAdmin, token } = useAuth();
   const canParts = isAdmin || (user?.canEditParts ?? false);
-  const colors = ROLE_COLORS[isAdmin ? "admin" : "employee"];
+  const colors = ROLE[isAdmin ? "admin" : "employee"];
 
-  // كلمة السر
+  // طي الشريط
+  const [isCollapsed, setIsCollapsed] = useState<boolean>(() =>
+    typeof window !== "undefined" && localStorage.getItem("rukn-sidebar-collapsed") === "true"
+  );
+  useEffect(() => { localStorage.setItem("rukn-sidebar-collapsed", String(isCollapsed)); }, [isCollapsed]);
+
+  // تغيير كلمة السر
   const [showPassModal, setShowPassModal] = useState(false);
   const [oldPass, setOldPass] = useState("");
   const [newPass, setNewPass] = useState("");
   const [showOld, setShowOld] = useState(false);
   const [showNew, setShowNew] = useState(false);
   const [savingPass, setSavingPass] = useState(false);
+
+  // تأكيد الخروج
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
   const handleChangePassword = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -99,58 +104,51 @@ export function Layout({ children }: { children: React.ReactNode }) {
     } finally { setSavingPass(false); }
   };
 
-  const pageTitle = PAGE_TITLES[location] || "RuknAuto";
-
-  const [isCollapsed, setIsCollapsed] = useState<boolean>(() => {
-    if (typeof window === "undefined") return false;
-    return localStorage.getItem("rukn-sidebar-collapsed") === "true";
-  });
-  useEffect(() => { localStorage.setItem("rukn-sidebar-collapsed", String(isCollapsed)); }, [isCollapsed]);
-
   const navItems = [
-    { href: "/", label: "الرئيسية", icon: LayoutDashboard },
-    { href: "/extract", label: "استخراج فاتورة", icon: ScanLine },
-    { href: "/invoices", label: "سجل الفواتير", icon: FileText },
+    { href: "/",         label: "الرئيسية",       icon: LayoutDashboard },
+    { href: "/extract",  label: "استخراج فاتورة", icon: ScanLine },
+    { href: "/invoices", label: "سجل الفواتير",   icon: FileText },
     ...(canParts ? [{ href: "/parts", label: "ذاكرة القطع", icon: Database }] : []),
   ];
-  const adminItems = isAdmin
-    ? [
-        { href: "/admin/users", label: "المستخدمون", icon: Users },
-        { href: "/admin/settings", label: "نموذج الذكاء", icon: Cpu },
-      ]
-    : [];
+  const adminItems = isAdmin ? [
+    { href: "/admin/users",    label: "المستخدمون",    icon: Users },
+    { href: "/admin/settings", label: "نموذج الذكاء", icon: Cpu },
+  ] : [];
 
-  const fadeStyle = (show: boolean) => ({
-    opacity: show ? 1 : 0,
-    maxWidth: show ? 200 : 0,
-    overflow: "hidden" as const,
+  const initials = user?.displayName?.[0] || "م";
+  const pageTitle = PAGE_TITLES[location] || "RuknAuto";
+
+  // مساعد: تلاشي + طي نصي
+  const fadeStyle = (visible: boolean): React.CSSProperties => ({
+    opacity: visible ? 1 : 0,
+    maxWidth: visible ? 200 : 0,
+    overflow: "hidden",
+    whiteSpace: "nowrap",
     transition: "opacity 160ms ease, max-width 280ms cubic-bezier(0.4,0,0.2,1)",
-    whiteSpace: "nowrap" as const,
   });
 
+  // مكوّن NavItem داخلي
   function NavItem({ href, label, icon: Icon }: { href: string; label: string; icon: any }) {
-    const isActive = location === href;
+    const active = location === href;
     return (
       <Link href={href}>
         <span
           title={isCollapsed ? label : undefined}
-          className="relative flex items-center gap-3 px-2.5 py-2.5 rounded-xl transition-all duration-150 cursor-pointer select-none overflow-hidden"
+          className="relative flex items-center gap-3 px-2.5 py-2.5 rounded-xl cursor-pointer select-none transition-all duration-150"
           style={{
-            background: isActive ? colors.dim : "transparent",
-            border: isActive ? `1px solid ${colors.border}` : "1px solid transparent",
-            color: isActive ? colors.accent : "hsl(var(--sidebar-foreground) / 0.5)",
+            background: active ? colors.dim : "transparent",
+            border: `1px solid ${active ? colors.border : "transparent"}`,
+            color: active ? colors.accent : "hsl(var(--sidebar-foreground)/0.5)",
           }}
         >
+          {/* مؤشر جانبي حين مطوي */}
+          {active && isCollapsed && (
+            <span className="absolute top-1/2 -translate-y-1/2 w-0.5 h-5 rounded-full" style={{ insetInlineStart: 0, background: colors.accent }} />
+          )}
           <Icon className="w-4 h-4 shrink-0" />
           <span className="text-[13px] font-medium" style={fadeStyle(!isCollapsed)}>{label}</span>
-          {isActive && !isCollapsed && (
+          {active && !isCollapsed && (
             <span className="mr-auto w-1.5 h-1.5 rounded-full shrink-0" style={{ background: colors.accent }} />
-          )}
-          {isActive && isCollapsed && (
-            <span
-              className="absolute top-1/2 -translate-y-1/2 w-0.5 h-5 rounded-full"
-              style={{ insetInlineStart: 0, background: colors.accent }}
-            />
           )}
         </span>
       </Link>
@@ -159,7 +157,8 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="flex h-screen w-full overflow-hidden bg-background" dir="rtl">
-      {/* ── الشريط الجانبي ── */}
+
+      {/* ══ الشريط الجانبي ══ */}
       <aside
         className="flex flex-col h-full shrink-0"
         style={{
@@ -174,7 +173,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <div className="px-3 pt-4 pb-3 flex items-center gap-2.5 overflow-hidden">
           <div
             className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0"
-            style={{ background: colors.gradient, boxShadow: `0 0 14px ${colors.glow}` }}
+            style={{ background: colors.gradient, boxShadow: `0 0 14px ${colors.dim}` }}
           >
             <ScanLine className="w-4 h-4 text-white" />
           </div>
@@ -190,12 +189,15 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <div className="h-px mx-3 mb-2 bg-sidebar-border" />
 
         {/* التنقل */}
-        <nav className="flex-1 px-2 py-1 space-y-0.5 overflow-hidden">
+        <nav className="flex-1 px-2 py-1 space-y-0.5 overflow-y-auto overflow-x-hidden">
           {navItems.map(item => <NavItem key={item.href} {...item} />)}
 
           {adminItems.length > 0 && (
             <>
-              <div className="mx-1 my-2 flex items-center gap-2" style={{ opacity: isCollapsed ? 0 : 1, transition: "opacity 160ms ease" }}>
+              <div
+                className="mx-1 my-2 flex items-center gap-2"
+                style={{ opacity: isCollapsed ? 0 : 1, transition: "opacity 160ms ease", pointerEvents: isCollapsed ? "none" : "auto" }}
+              >
                 <div className="flex-1 h-px bg-sidebar-border" />
                 <span className="text-[9px] font-bold tracking-widest uppercase" style={{ color: colors.accent + "80" }}>إدارة</span>
                 <div className="flex-1 h-px bg-sidebar-border" />
@@ -207,24 +209,25 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
         <div className="h-px mx-3 bg-sidebar-border" />
 
-        {/* ثيم + طي */}
+        {/* أدوات أسفل: ثيم + طي */}
         <div className="p-2 space-y-0.5">
           <button
             onClick={toggleTheme}
             title={theme === "dark" ? "الوضع الصباحي" : "الوضع الليلي"}
-            className="w-full flex items-center gap-3 px-2.5 py-2 rounded-xl text-sidebar-foreground/45 hover:bg-sidebar-accent/40 hover:text-sidebar-foreground transition-all duration-150 cursor-pointer overflow-hidden"
+            className="w-full flex items-center gap-3 px-2.5 py-2 rounded-xl text-sidebar-foreground/40 hover:text-sidebar-foreground/70 hover:bg-sidebar-accent/40 transition-all duration-150 cursor-pointer"
           >
             {theme === "dark"
-              ? <Sun className="w-4 h-4 shrink-0 text-amber-400/80" />
-              : <Moon className="w-4 h-4 shrink-0 text-blue-400/80" />}
+              ? <Sun className="w-4 h-4 shrink-0 text-amber-400/70" />
+              : <Moon className="w-4 h-4 shrink-0 text-blue-400/70" />}
             <span className="text-xs" style={fadeStyle(!isCollapsed)}>
               {theme === "dark" ? "الوضع الصباحي" : "الوضع الليلي"}
             </span>
           </button>
+
           <button
             onClick={() => setIsCollapsed(c => !c)}
             title={isCollapsed ? "توسيع القائمة" : "طي القائمة"}
-            className="w-full flex items-center gap-3 px-2.5 py-2 rounded-xl text-sidebar-foreground/30 hover:bg-sidebar-accent/30 hover:text-sidebar-foreground/60 transition-all duration-150 cursor-pointer overflow-hidden"
+            className="w-full flex items-center gap-3 px-2.5 py-2 rounded-xl text-sidebar-foreground/30 hover:text-sidebar-foreground/60 hover:bg-sidebar-accent/30 transition-all duration-150 cursor-pointer"
           >
             <ChevronRight
               className="w-4 h-4 shrink-0 transition-transform duration-300"
@@ -234,101 +237,164 @@ export function Layout({ children }: { children: React.ReactNode }) {
           </button>
         </div>
 
-        {/* المستخدم */}
-        <div className="p-3 border-t border-sidebar-border overflow-hidden">
-          <div className="rounded-xl p-2.5" style={{ background: colors.dim, border: `1px solid ${colors.border}` }}>
-            <div className="flex items-center gap-2 min-w-0 mb-2">
-              <div
-                className="w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-bold text-white shrink-0"
-                style={{ background: colors.gradient }}
-              >
-                {user?.displayName?.[0] || "م"}
-              </div>
-              <div className="min-w-0 flex-1" style={fadeStyle(!isCollapsed)}>
-                <p className="text-xs font-semibold text-sidebar-foreground truncate">{user?.displayName || "مستخدم"}</p>
-                <p className="text-[9px] truncate" style={{ color: colors.accent }}>{colors.label}</p>
-              </div>
-            </div>
-            <div className="flex gap-1.5" style={{ opacity: isCollapsed ? 0 : 1, transition: "opacity 160ms ease" }}>
+        {/* ══ قسم المستخدم — قائمة ذكية ══ */}
+        <div className="p-2 border-t border-sidebar-border">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
               <button
-                onClick={() => setShowPassModal(true)}
-                className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-[11px] font-medium bg-sidebar-accent/50 text-sidebar-foreground/60 hover:text-sidebar-foreground transition-colors"
+                className="w-full flex items-center gap-2.5 p-2 rounded-xl transition-all duration-150 cursor-pointer hover:bg-sidebar-accent/40 outline-none"
+                style={{ border: `1px solid ${colors.border}`, background: colors.dim }}
+                title={isCollapsed ? user?.displayName || "الحساب" : undefined}
               >
-                <KeyRound className="w-3 h-3" />
-                <span>كلمة السر</span>
-              </button>
-              <button
-                onClick={logout}
-                title="تسجيل الخروج"
-                className="flex items-center justify-center p-1.5 rounded-lg bg-sidebar-accent/50 text-red-400/70 hover:text-red-400 hover:bg-red-400/10 transition-colors"
-              >
-                <LogOut className="w-3.5 h-3.5" />
-              </button>
-            </div>
-          </div>
-        </div>
+                {/* الأفاتار */}
+                <div
+                  className="w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-bold text-white shrink-0"
+                  style={{ background: colors.gradient }}
+                >
+                  {initials}
+                </div>
 
-        {/* نافذة كلمة السر */}
-        <Dialog open={showPassModal} onOpenChange={setShowPassModal}>
-          <DialogContent className="max-w-sm bg-card border-border rounded-xl" dir="rtl">
-            <DialogHeader className="border-b border-border pb-4">
-              <DialogTitle className="text-sm font-bold flex items-center gap-2">
-                <KeyRound className="w-4 h-4 text-primary" />
-                تغيير كلمة السر
-              </DialogTitle>
-            </DialogHeader>
-            <form onSubmit={handleChangePassword} className="space-y-3 py-3">
-              <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-muted-foreground">كلمة السر الحالية</label>
-                <div className="relative">
-                  <Input type={showOld ? "text" : "password"} value={oldPass} onChange={e => setOldPass(e.target.value)} className="h-9 pl-9" dir="ltr" placeholder="كلمة السر الحالية" />
-                  <button type="button" onClick={() => setShowOld(s => !s)} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground/50 hover:text-muted-foreground">
-                    {showOld ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </button>
+                {/* الاسم والدور — يختفيان عند الطي */}
+                <div className="flex-1 min-w-0 text-right" style={fadeStyle(!isCollapsed)}>
+                  <p className="text-xs font-semibold text-sidebar-foreground leading-none truncate">
+                    {user?.displayName || "مستخدم"}
+                  </p>
+                  <p className="text-[9px] mt-0.5 truncate" style={{ color: colors.accent }}>
+                    {colors.label}
+                  </p>
                 </div>
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-muted-foreground">كلمة السر الجديدة</label>
-                <div className="relative">
-                  <Input type={showNew ? "text" : "password"} value={newPass} onChange={e => setNewPass(e.target.value)} className="h-9 pl-9" dir="ltr" placeholder="6 أحرف على الأقل" />
-                  <button type="button" onClick={() => setShowNew(s => !s)} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground/50 hover:text-muted-foreground">
-                    {showNew ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </button>
-                </div>
-              </div>
-              <div className="flex justify-end gap-2 pt-2 border-t border-border/50">
-                <Button type="button" variant="outline" size="sm" onClick={() => setShowPassModal(false)} disabled={savingPass}>إلغاء</Button>
-                <Button type="submit" size="sm" disabled={savingPass || !oldPass || !newPass}>
-                  {savingPass ? "جاري الحفظ..." : "حفظ"}
-                </Button>
-              </div>
-            </form>
-          </DialogContent>
-        </Dialog>
+
+                <ChevronDown
+                  className="w-3 h-3 shrink-0 text-sidebar-foreground/30"
+                  style={fadeStyle(!isCollapsed)}
+                />
+              </button>
+            </DropdownMenuTrigger>
+
+            <DropdownMenuContent
+              side="top"
+              align="end"
+              sideOffset={8}
+              className="w-52 rounded-xl border-border bg-card shadow-xl"
+              dir="rtl"
+            >
+              <DropdownMenuLabel className="px-3 py-2.5">
+                <p className="text-xs font-bold text-foreground truncate">{user?.displayName || "مستخدم"}</p>
+                <p className="text-[10px] text-muted-foreground mt-0.5">{user?.username}</p>
+              </DropdownMenuLabel>
+
+              <DropdownMenuSeparator />
+
+              <DropdownMenuItem
+                className="gap-2.5 cursor-pointer px-3 py-2 rounded-lg mx-1"
+                onClick={() => setShowPassModal(true)}
+              >
+                <KeyRound className="w-4 h-4 text-muted-foreground" />
+                <span className="text-sm">تغيير كلمة السر</span>
+              </DropdownMenuItem>
+
+              <DropdownMenuSeparator />
+
+              <DropdownMenuItem
+                className="gap-2.5 cursor-pointer px-3 py-2 rounded-lg mx-1 mb-1 text-red-400 focus:text-red-400 focus:bg-red-400/10"
+                onClick={() => setShowLogoutConfirm(true)}
+              >
+                <LogOut className="w-4 h-4" />
+                <span className="text-sm">تسجيل الخروج</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       </aside>
 
-      {/* ── المحتوى ── */}
+      {/* ══ المحتوى الرئيسي ══ */}
       <main className="flex-1 flex flex-col h-full overflow-hidden min-w-0">
-        <header className="flex items-center px-6 shrink-0 gap-3 bg-card/50 border-b border-border" style={{ height: "52px" }}>
+        {/* شريط العنوان */}
+        <header className="flex items-center px-5 shrink-0 gap-3 bg-card/50 border-b border-border" style={{ height: "52px" }}>
           <div className="flex items-center gap-1.5 text-xs">
-            <span className="text-muted-foreground/40">RuknAuto</span>
-            <ChevronRight className="w-3 h-3 text-muted-foreground/30 shrink-0" style={{ transform: "rotate(180deg)" }} />
+            <span className="text-muted-foreground/40 text-[11px]">RuknAuto</span>
+            <ChevronRight className="w-3 h-3 text-muted-foreground/25 shrink-0" style={{ transform: "rotate(180deg)" }} />
             {isAdmin && <ShieldCheck className="w-3 h-3 shrink-0" style={{ color: colors.accent }} />}
             <span className="font-semibold text-foreground text-sm">{pageTitle}</span>
           </div>
           <div className="flex-1" />
           <div
             className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium"
-            style={{ background: "#10b98112", border: "1px solid #10b98128", color: "#10b981" }}
+            style={{ background: "#10b98112", border: "1px solid #10b98125", color: "#10b981" }}
           >
-            <span className="w-1.5 h-1.5 rounded-full bg-green-500 shrink-0" />
+            <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse shrink-0" />
             <span className="hidden sm:block">NewPoint ERP متصل</span>
           </div>
         </header>
+
+        {/* المحتوى */}
         <div className="flex-1 overflow-auto p-6 bg-background">
           <div className="max-w-7xl mx-auto">{children}</div>
         </div>
       </main>
+
+      {/* ══ تأكيد تسجيل الخروج ══ */}
+      <AlertDialog open={showLogoutConfirm} onOpenChange={setShowLogoutConfirm}>
+        <AlertDialogContent className="max-w-sm rounded-2xl border-border bg-card" dir="rtl">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 text-base">
+              <LogOut className="w-4 h-4 text-red-400" />
+              تسجيل الخروج
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-sm text-muted-foreground">
+              هل تريد الخروج من حسابك؟ ستحتاج إلى إعادة تسجيل الدخول.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex gap-2 flex-row-reverse">
+            <AlertDialogCancel className="flex-1 rounded-xl">إلغاء</AlertDialogCancel>
+            <AlertDialogAction
+              className="flex-1 rounded-xl bg-red-500 hover:bg-red-600 text-white"
+              onClick={logout}
+            >
+              خروج
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* ══ نافذة تغيير كلمة السر ══ */}
+      <Dialog open={showPassModal} onOpenChange={setShowPassModal}>
+        <DialogContent className="max-w-sm bg-card border-border rounded-2xl" dir="rtl">
+          <DialogHeader className="border-b border-border pb-4">
+            <DialogTitle className="text-sm font-bold flex items-center gap-2">
+              <KeyRound className="w-4 h-4 text-primary" />
+              تغيير كلمة السر
+            </DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleChangePassword} className="space-y-3 py-3">
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-muted-foreground">كلمة السر الحالية</label>
+              <div className="relative">
+                <Input type={showOld ? "text" : "password"} value={oldPass} onChange={e => setOldPass(e.target.value)} className="h-9 pl-9" dir="ltr" placeholder="أدخل كلمة سرك الحالية" />
+                <button type="button" onClick={() => setShowOld(s => !s)} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground/50 hover:text-muted-foreground">
+                  {showOld ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-muted-foreground">كلمة السر الجديدة</label>
+              <div className="relative">
+                <Input type={showNew ? "text" : "password"} value={newPass} onChange={e => setNewPass(e.target.value)} className="h-9 pl-9" dir="ltr" placeholder="6 أحرف على الأقل" />
+                <button type="button" onClick={() => setShowNew(s => !s)} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground/50 hover:text-muted-foreground">
+                  {showNew ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+            </div>
+            <div className="flex justify-end gap-2 pt-2 border-t border-border/50">
+              <Button type="button" variant="outline" size="sm" onClick={() => setShowPassModal(false)} disabled={savingPass}>إلغاء</Button>
+              <Button type="submit" size="sm" disabled={savingPass || !oldPass || !newPass}>
+                {savingPass ? "جاري الحفظ..." : "حفظ"}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
     </div>
   );
 }

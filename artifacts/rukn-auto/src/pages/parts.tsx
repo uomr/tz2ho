@@ -8,6 +8,11 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel,
+  AlertDialogContent, AlertDialogDescription,
+  AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 const ITEMS_PER_PAGE = 25;
 
@@ -41,6 +46,8 @@ export default function Parts() {
   const [editDescription, setEditDescription] = useState("");
   const [isSavingEdit, setIsSavingEdit] = useState(false);
 
+  const [deleteTarget, setDeleteTarget] = useState<any | null>(null);
+
   const handleAddPart = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newPartNumber || !newDescription) return;
@@ -64,16 +71,20 @@ export default function Parts() {
     });
   };
 
-  const handleDelete = (id: number) => {
-    if (confirm("هل أنت متأكد من حذف هذه القطعة من الذاكرة؟")) {
-      deletePart.mutate({ id }, {
-        onSuccess: () => {
-          toast.success("تم الحذف بنجاح");
-          queryClient.invalidateQueries({ queryKey: getListPartsQueryKey() });
-        },
-        onError: () => toast.error("حدث خطأ أثناء الحذف")
-      });
-    }
+  const handleDelete = (part: any) => {
+    setDeleteTarget(part);
+  };
+
+  const confirmDelete = () => {
+    if (!deleteTarget) return;
+    deletePart.mutate({ id: deleteTarget.id }, {
+      onSuccess: () => {
+        toast.success("تم حذف القطعة من الذاكرة");
+        setDeleteTarget(null);
+        queryClient.invalidateQueries({ queryKey: getListPartsQueryKey() });
+      },
+      onError: () => { toast.error("حدث خطأ أثناء الحذف"); setDeleteTarget(null); },
+    });
   };
 
   const handleOpenEdit = (part: any) => {
@@ -376,7 +387,7 @@ export default function Parts() {
                             variant="ghost"
                             size="icon"
                             className="h-7 w-7 text-destructive/60 hover:bg-destructive/10 hover:text-destructive"
-                            onClick={() => handleDelete(part.id)}
+                            onClick={() => handleDelete(part)}
                             disabled={deletePart.isPending}
                             title="حذف"
                           >
@@ -439,6 +450,32 @@ export default function Parts() {
           )}
         </CardContent>
       </Card>
+
+      {/* ── تأكيد الحذف ── */}
+      <AlertDialog open={!!deleteTarget} onOpenChange={open => !open && setDeleteTarget(null)}>
+        <AlertDialogContent className="max-w-sm rounded-2xl border-border bg-card" dir="rtl">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 text-base">
+              <Trash2 className="w-4 h-4 text-red-400" />
+              حذف القطعة
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-sm text-muted-foreground">
+              هل تريد حذف{" "}
+              <span className="font-semibold text-foreground">«{deleteTarget?.partNumber}»</span>{" "}
+              من ذاكرة القطع؟ لا يمكن التراجع عن هذا الإجراء.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex gap-2 flex-row-reverse">
+            <AlertDialogCancel className="flex-1 rounded-xl">إلغاء</AlertDialogCancel>
+            <AlertDialogAction
+              className="flex-1 rounded-xl bg-red-500 hover:bg-red-600 text-white"
+              onClick={confirmDelete}
+            >
+              حذف
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* ── نافذة التعديل ── */}
       <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
