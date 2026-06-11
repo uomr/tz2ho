@@ -15,6 +15,7 @@ import Parts from "@/pages/parts";
 import Login from "@/pages/login";
 import AdminUsers from "@/pages/admin-users";
 import AdminSettings from "@/pages/admin-settings";
+import Analytics from "@/pages/analytics";
 
 // ربط الـ token بـ api-client-react — يُرفق تلقائياً في كل طلب
 setAuthTokenGetter(() => localStorage.getItem("ruknauto_token"));
@@ -69,6 +70,7 @@ function Router() {
         <Route path="/admin/settings">
           {isAdmin ? <AdminSettings /> : <Redirect to="/" />}
         </Route>
+        <Route path="/analytics" component={Analytics} />
         <Route component={NotFound} />
       </Switch>
     </Layout>

@@ -2,7 +2,7 @@ import { Link, useLocation } from "wouter";
 import {
   LayoutDashboard, ScanLine, FileText, Database,
   ChevronRight, Sun, Moon, LogOut, Users, KeyRound,
-  Eye, EyeOff, Cpu, ShieldCheck, ChevronDown,
+  Eye, EyeOff, Cpu, ShieldCheck, ChevronDown, BarChart3,
 } from "lucide-react";
 import { useState, useEffect, createContext, useContext } from "react";
 import { useAuth, getAuthHeader } from "@/contexts/AuthContext";
@@ -55,6 +55,7 @@ const PAGE_TITLES: Record<string, string> = {
   "/extract": "استخراج فاتورة",
   "/invoices": "سجل الفواتير",
   "/parts": "ذاكرة القطع",
+  "/analytics": "تحليلات الموردين",
   "/admin/users": "إدارة المستخدمين",
   "/admin/settings": "إعدادات الذكاء الاصطناعي",
 };
@@ -105,9 +106,10 @@ export function Layout({ children }: { children: React.ReactNode }) {
   };
 
   const navItems = [
-    { href: "/",         label: "الرئيسية",       icon: LayoutDashboard },
-    { href: "/extract",  label: "استخراج فاتورة", icon: ScanLine },
-    { href: "/invoices", label: "سجل الفواتير",   icon: FileText },
+    { href: "/",           label: "الرئيسية",         icon: LayoutDashboard },
+    { href: "/extract",    label: "استخراج فاتورة",   icon: ScanLine },
+    { href: "/invoices",   label: "سجل الفواتير",     icon: FileText },
+    { href: "/analytics",  label: "التحليلات",         icon: BarChart3 },
     ...(canParts ? [{ href: "/parts", label: "ذاكرة القطع", icon: Database }] : []),
   ];
   const adminItems = isAdmin ? [
