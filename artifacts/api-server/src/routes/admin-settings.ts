@@ -7,6 +7,7 @@ import { systemSettingsTable, AVAILABLE_MODELS, DEFAULT_MODEL_ID } from "@worksp
 import { eq } from "drizzle-orm";
 import { requireAdmin } from "../middlewares/auth.js";
 import { logger } from "../lib/logger.js";
+import { rebuildMissingEmbeddings } from "../lib/parts-memory.js";
 
 const router: IRouter = Router();
 
@@ -133,5 +134,17 @@ export async function recordUsage(tokensIn: number, tokensOut: number): Promise<
     setSetting("monthly_extractions", String((parseInt(curEx  ?? "0")) + 1)),
   ]);
 }
+
+// ── POST /api/admin/rebuild-embeddings ─────────────────────
+router.post("/admin/rebuild-embeddings", requireAdmin, async (_req, res): Promise<void> => {
+  logger.info("Admin triggered embedding rebuild");
+  try {
+    const result = await rebuildMissingEmbeddings();
+    res.json({ ok: true, ...result });
+  } catch (err) {
+    logger.error({ err }, "Embedding rebuild failed");
+    res.status(500).json({ error: "فشل إعادة بناء الـ embeddings" });
+  }
+});
 
 export default router;

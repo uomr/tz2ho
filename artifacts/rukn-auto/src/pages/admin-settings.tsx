@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import {
   Settings, Zap, Star, DollarSign, BarChart2, CheckCircle2,
-  TrendingUp, Activity, Cpu, Shield
+  TrendingUp, Activity, Cpu, Shield, Brain, RefreshCw, Sparkles
 } from "lucide-react";
 
 const BASE_URL = import.meta.env.BASE_URL?.replace(/\/$/, "") || "";
@@ -71,6 +71,8 @@ export default function AdminSettings() {
   const [saving, setSaving] = useState(false);
   const [selected, setSelected] = useState<string>("");
   const [costLimit, setCostLimit] = useState<string>("");
+  const [rebuildingEmbeddings, setRebuildingEmbeddings] = useState(false);
+  const [rebuildResult, setRebuildResult] = useState<{ total: number; built: number; failed: number } | null>(null);
 
   const headers = { "Content-Type": "application/json", ...getAuthHeader(token) };
 
@@ -89,6 +91,33 @@ export default function AdminSettings() {
   };
 
   useEffect(() => { fetchSettings(); }, []);
+
+  const handleRebuildEmbeddings = async () => {
+    setRebuildingEmbeddings(true);
+    setRebuildResult(null);
+    try {
+      const res = await fetch(`${BASE_URL}/api/admin/rebuild-embeddings`, {
+        method: "POST",
+        headers,
+      });
+      if (res.ok) {
+        const d = await res.json();
+        setRebuildResult(d);
+        if (d.total === 0) {
+          toast.success("جميع القطع لديها ذاكرة ذكية بالفعل ✓");
+        } else {
+          toast.success(`تم بناء ذاكرة ذكية لـ ${d.built} قطعة من أصل ${d.total} ✓`);
+        }
+      } else {
+        const d = await res.json();
+        toast.error(d.error || "فشل إعادة البناء");
+      }
+    } catch {
+      toast.error("خطأ في الاتصال بالخادم");
+    } finally {
+      setRebuildingEmbeddings(false);
+    }
+  };
 
   const handleSave = async () => {
     setSaving(true);
@@ -306,6 +335,50 @@ export default function AdminSettings() {
             >
               <CheckCircle2 className="w-4 h-4" />
               {saving ? "جاري الحفظ..." : "حفظ الإعدادات"}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* الذاكرة الذكية — Vector Embeddings */}
+      <Card className="bg-card border-border">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-sm font-semibold flex items-center gap-2">
+            <Brain className="w-4 h-4 text-primary" />
+            الذاكرة الذكية — Vector Embeddings
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-col md:flex-row items-start md:items-center gap-4">
+            <div className="flex-1">
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                الذاكرة الذكية تستخدم تضمينات متجهية (Vector Embeddings) لمطابقة أوصاف القطع بدقة تصل إلى 95%،
+                حتى مع الاختلافات اللغوية والأخطاء الإملائية. اضغط إعادة البناء لتحسين دقة جميع القطع الموجودة.
+              </p>
+              {rebuildResult && (
+                <div className="mt-3 flex items-center gap-3 text-xs">
+                  <span className="flex items-center gap-1 text-green-400">
+                    <Sparkles className="w-3.5 h-3.5" />
+                    {rebuildResult.built} قطعة تمت معالجتها
+                  </span>
+                  {rebuildResult.failed > 0 && (
+                    <span className="text-amber-400">{rebuildResult.failed} فشلت</span>
+                  )}
+                  {rebuildResult.total === 0 && (
+                    <span className="text-green-400">جميع القطع محدّثة بالفعل ✓</span>
+                  )}
+                </div>
+              )}
+            </div>
+            <Button
+              onClick={handleRebuildEmbeddings}
+              disabled={rebuildingEmbeddings}
+              variant="outline"
+              size="sm"
+              className="gap-2 shrink-0"
+            >
+              <RefreshCw className={`w-4 h-4 ${rebuildingEmbeddings ? "animate-spin" : ""}`} />
+              {rebuildingEmbeddings ? "جاري البناء..." : "إعادة بناء الذاكرة"}
             </Button>
           </div>
         </CardContent>

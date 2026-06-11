@@ -1,0 +1,1 @@
+- [Vector Embeddings Setup](vector-embeddings.md) — pgvector enabled, HNSW index on parts.embedding, hybrid search (vector+fuzzy) in parts-memory.ts
