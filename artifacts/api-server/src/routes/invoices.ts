@@ -19,6 +19,7 @@ import {
 } from "@workspace/api-zod";
 import { extractInvoiceFromImage } from "../lib/invoice-extractor";
 import { enrichItemsWithMemory, learnFromSavedInvoice } from "../lib/parts-memory";
+import { storageService } from "../lib/storage-service.js";
 
 const router: IRouter = Router();
 
@@ -95,6 +96,18 @@ router.post("/invoices/extract", async (req, res): Promise<void> => {
   // Create pending invoice record
   const totalAmount = enrichedItems.reduce((sum, item) => sum + (item.total ?? 0), 0);
 
+  // ── رفع الصورة إلى Object Storage بدلاً من تخزين base64 في DB ──
+  let imageUrl: string | null = null;
+  let legacyBase64: string | null = null;
+  try {
+    const uploaded = await storageService.uploadBase64(imageBase64, mimeType ?? "image/jpeg");
+    imageUrl = uploaded.url;
+  } catch (uploadErr) {
+    // في حال فشل التخزين: نحتفظ بـ base64 كـ fallback
+    req.log.warn({ uploadErr }, "Storage upload failed — falling back to base64");
+    legacyBase64 = imageBase64;
+  }
+
   const [invoice] = await db
     .insert(invoicesTable)
     .values({
@@ -102,7 +115,8 @@ router.post("/invoices/extract", async (req, res): Promise<void> => {
       supplier: extractedData.supplier || null,
       date: extractedData.date || null,
       status: "pending",
-      imageBase64,
+      imageBase64: legacyBase64,
+      imageUrl,
       totalAmount,
       itemCount: enrichedItems.length,
     })
@@ -171,7 +185,13 @@ router.get("/invoices/:id", async (req, res): Promise<void> => {
     .from(invoiceItemsTable)
     .where(eq(invoiceItemsTable.invoiceId, invoice.id));
 
-  res.json({ ...invoice, items });
+  // إعادة الصورة: imageUrl إن وُجد، وإلا imageBase64 كـ fallback
+  const { imageBase64: _b64, ...invoiceWithoutB64 } = invoice;
+  res.json({
+    ...invoiceWithoutB64,
+    imageBase64: invoice.imageUrl ? undefined : invoice.imageBase64,
+    items,
+  });
 });
 
 router.delete("/invoices/:id", async (req, res): Promise<void> => {

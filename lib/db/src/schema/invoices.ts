@@ -9,6 +9,7 @@ export const invoicesTable = pgTable("invoices", {
   date: text("date"),
   status: text("status").notNull().default("pending"),
   imageBase64: text("image_base64"),
+  imageUrl: text("image_url"),
   totalAmount: real("total_amount"),
   itemCount: integer("item_count"),
   createdAt: timestamp("created_at").defaultNow().notNull(),

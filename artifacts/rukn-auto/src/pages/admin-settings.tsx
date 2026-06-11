@@ -8,7 +8,8 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import {
   Settings, Zap, Star, DollarSign, BarChart2, CheckCircle2,
-  TrendingUp, Activity, Cpu, Shield, Brain, RefreshCw, Sparkles
+  TrendingUp, Activity, Cpu, Shield, Brain, RefreshCw, Sparkles,
+  HardDrive, ArrowRightLeft, Trash2, CheckCircle, AlertTriangle,
 } from "lucide-react";
 
 const BASE_URL = import.meta.env.BASE_URL?.replace(/\/$/, "") || "";
@@ -74,6 +75,15 @@ export default function AdminSettings() {
   const [rebuildingEmbeddings, setRebuildingEmbeddings] = useState(false);
   const [rebuildResult, setRebuildResult] = useState<{ total: number; built: number; failed: number } | null>(null);
 
+  // Storage migration state
+  const [storageStats, setStorageStats] = useState<{
+    storage: { adapter: string; fileCount: number; totalBytes: number };
+    migration: { total: number; migrated: number; pendingMigration: number; hasBase64: number };
+  } | null>(null);
+  const [migrating, setMigrating] = useState(false);
+  const [migrationProgress, setMigrationProgress] = useState<{ pct: number; migrated: number; total: number; failed: number } | null>(null);
+  const [cleaningUp, setCleaningUp] = useState(false);
+
   const headers = { "Content-Type": "application/json", ...getAuthHeader(token) };
 
   const fetchSettings = async () => {
@@ -90,7 +100,69 @@ export default function AdminSettings() {
     }
   };
 
-  useEffect(() => { fetchSettings(); }, []);
+  useEffect(() => { fetchSettings(); fetchStorageStats(); }, []);
+
+  const fetchStorageStats = async () => {
+    try {
+      const res = await fetch(`${BASE_URL}/api/admin/storage/stats`, { headers });
+      if (res.ok) setStorageStats(await res.json());
+    } catch { /* silent */ }
+  };
+
+  // fetch-based SSE (EventSource لا يدعم custom headers)
+  const handleMigrateFixed = async () => {
+    setMigrating(true);
+    setMigrationProgress(null);
+    try {
+      const res = await fetch(`${BASE_URL}/api/admin/storage/migrate`, {
+        method: "POST",
+        headers,
+      });
+      if (!res.ok) throw new Error("فشل الطلب");
+      const reader = res.body!.getReader();
+      const dec = new TextDecoder();
+      let buf = "";
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buf += dec.decode(value, { stream: true });
+        const lines = buf.split("\n");
+        buf = lines.pop() ?? "";
+        for (const line of lines) {
+          if (!line.startsWith("data:")) continue;
+          try {
+            const data = JSON.parse(line.slice(5).trim());
+            if (data.type === "start") {
+              setMigrationProgress({ pct: 0, migrated: 0, total: data.total, failed: 0 });
+            } else if (data.type === "progress") {
+              setMigrationProgress({ pct: data.pct, migrated: data.migrated, total: data.total, failed: data.failed });
+            } else if (data.type === "complete") {
+              setMigrationProgress({ pct: 100, migrated: data.migrated, total: data.total, failed: data.failed });
+              toast.success(data.message || "الترحيل اكتمل ✓");
+              fetchStorageStats();
+            }
+          } catch { /* تجاهل أسطر غير صالحة */ }
+        }
+      }
+    } catch (err: any) {
+      toast.error(err.message || "خطأ في الترحيل");
+    } finally {
+      setMigrating(false);
+    }
+  };
+
+  const handleCleanup = async () => {
+    setCleaningUp(true);
+    try {
+      const res = await fetch(`${BASE_URL}/api/admin/storage/cleanup`, { method: "POST", headers });
+      if (res.ok) {
+        const d = await res.json();
+        toast.success(`تم تحرير مساحة الـ base64 من ${d.cleaned} فاتورة ✓`);
+        fetchStorageStats();
+      } else toast.error("فشل التنظيف");
+    } catch { toast.error("خطأ في الاتصال"); }
+    finally { setCleaningUp(false); }
+  };
 
   const handleRebuildEmbeddings = async () => {
     setRebuildingEmbeddings(true);
@@ -335,6 +407,107 @@ export default function AdminSettings() {
             >
               <CheckCircle2 className="w-4 h-4" />
               {saving ? "جاري الحفظ..." : "حفظ الإعدادات"}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Object Storage — ترحيل الصور */}
+      <Card className="bg-card border-border">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-sm font-semibold flex items-center gap-2">
+            <HardDrive className="w-4 h-4 text-primary" />
+            Object Storage — تخزين الصور
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {storageStats && (
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              {[
+                { label: "المحرك", val: storageStats.storage.adapter === "local" ? "Local FS" : "S3", icon: HardDrive },
+                { label: "ملفات مخزّنة", val: storageStats.storage.fileCount.toLocaleString(), icon: CheckCircle },
+                { label: "حجم التخزين", val: `${(storageStats.storage.totalBytes / 1024 / 1024).toFixed(1)} MB`, icon: Activity },
+                { label: "في انتظار الترحيل", val: storageStats.migration.pendingMigration.toLocaleString(), icon: AlertTriangle },
+              ].map(({ label, val, icon: Icon }) => (
+                <div key={label} className="bg-muted/30 rounded-xl p-3 text-center">
+                  <Icon className="w-3.5 h-3.5 mx-auto mb-1.5 text-muted-foreground" />
+                  <p className="text-base font-bold text-foreground">{val}</p>
+                  <p className="text-[10px] text-muted-foreground mt-0.5">{label}</p>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* شريط التقدم */}
+          {storageStats && (
+            <div>
+              <div className="flex justify-between text-[11px] text-muted-foreground mb-1">
+                <span>تقدم الترحيل</span>
+                <span>
+                  {storageStats.migration.migrated} / {storageStats.migration.total}
+                  {storageStats.migration.total > 0 && (
+                    <> ({Math.round(storageStats.migration.migrated / storageStats.migration.total * 100)}%)</>
+                  )}
+                </span>
+              </div>
+              <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-primary rounded-full transition-all duration-700"
+                  style={{
+                    width: storageStats.migration.total > 0
+                      ? `${Math.round(storageStats.migration.migrated / storageStats.migration.total * 100)}%`
+                      : "0%"
+                  }}
+                />
+              </div>
+            </div>
+          )}
+
+          {/* شريط تقدم حي أثناء الترحيل */}
+          {migrationProgress && migrating && (
+            <div>
+              <div className="flex justify-between text-[11px] mb-1">
+                <span className="text-primary font-medium animate-pulse">جاري الترحيل...</span>
+                <span className="text-muted-foreground">{migrationProgress.pct}% — {migrationProgress.migrated}/{migrationProgress.total}</span>
+              </div>
+              <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-emerald-500 rounded-full transition-all duration-300"
+                  style={{ width: `${migrationProgress.pct}%` }}
+                />
+              </div>
+              {migrationProgress.failed > 0 && (
+                <p className="text-[11px] text-amber-400 mt-1">{migrationProgress.failed} فاتورة فشلت</p>
+              )}
+            </div>
+          )}
+
+          <p className="text-xs text-muted-foreground leading-relaxed">
+            بدلاً من تخزين صور الفواتير كـ base64 داخل قاعدة البيانات (يُبطئها)،
+            يُخزّنها النظام الآن كملفات منفصلة. الترحيل لا يمسّ البيانات — الفواتير الجديدة تستخدم
+            التخزين الجديد تلقائياً.
+          </p>
+
+          <div className="flex flex-wrap gap-2">
+            <Button
+              onClick={handleMigrateFixed}
+              disabled={migrating || (storageStats?.migration.pendingMigration === 0)}
+              variant="outline"
+              size="sm"
+              className="gap-2"
+            >
+              <ArrowRightLeft className={`w-4 h-4 ${migrating ? "animate-spin" : ""}`} />
+              {migrating ? "جاري الترحيل..." : `ترحيل الصور (${storageStats?.migration.pendingMigration ?? "…"})`}
+            </Button>
+            <Button
+              onClick={handleCleanup}
+              disabled={cleaningUp || !storageStats || storageStats.migration.hasBase64 === 0 || storageStats.migration.pendingMigration > 0}
+              variant="outline"
+              size="sm"
+              className="gap-2 text-amber-400 border-amber-500/30 hover:bg-amber-500/10"
+            >
+              <Trash2 className={`w-4 h-4 ${cleaningUp ? "animate-spin" : ""}`} />
+              {cleaningUp ? "جاري التنظيف..." : "حذف base64 المُرحَّل"}
             </Button>
           </div>
         </CardContent>

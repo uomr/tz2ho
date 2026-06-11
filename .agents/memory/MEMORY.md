@@ -1,1 +1,3 @@
 - [Vector Embeddings Setup](vector-embeddings.md) — pgvector enabled, HNSW index on parts.embedding, hybrid search (vector+fuzzy) in parts-memory.ts
+- [Storage Architecture](storage-architecture.md) — Object Storage مُجرَّد: Local FS الآن, S3 لاحقاً بتغيير env var فقط
+- [Invoice Image Duality](invoice-image-duality.md) — فواتير قديمة imageBase64، جديدة imageUrl — كلاهما مدعوم في GET /invoices/:id

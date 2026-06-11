@@ -8,6 +8,7 @@ import usersRouter from "./users";
 import adminSettingsRouter from "./admin-settings";
 import analyticsRouter from "./analytics";
 import exportRouter from "./export";
+import storageAdminRouter from "./storage-admin";
 
 const router: IRouter = Router();
 
@@ -20,5 +21,6 @@ router.use(partsRouter);
 router.use(statsRouter);
 router.use(analyticsRouter);
 router.use(exportRouter);
+router.use(storageAdminRouter);
 
 export default router;
