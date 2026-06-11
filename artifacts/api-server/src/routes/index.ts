@@ -7,6 +7,7 @@ import authRouter from "./auth";
 import usersRouter from "./users";
 import adminSettingsRouter from "./admin-settings";
 import analyticsRouter from "./analytics";
+import exportRouter from "./export";
 
 const router: IRouter = Router();
 
@@ -18,5 +19,6 @@ router.use(invoicesRouter);
 router.use(partsRouter);
 router.use(statsRouter);
 router.use(analyticsRouter);
+router.use(exportRouter);
 
 export default router;

@@ -2,7 +2,7 @@ import { useListInvoices, getListInvoicesQueryKey, useDeleteInvoice } from "@wor
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search, Trash2, Eye, Play, CheckCircle2, AlertCircle, Loader2, Sparkles, Terminal, FileText, Pencil, XCircle, SkipForward } from "lucide-react";
+import { Search, Trash2, Eye, Play, CheckCircle2, AlertCircle, Loader2, Sparkles, Terminal, FileText, Pencil, XCircle, SkipForward, FileDown, Printer, FileSpreadsheet } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
@@ -563,6 +563,129 @@ export default function Invoices() {
     inv.supplier?.toLowerCase().includes(search.toLowerCase())
   );
 
+  const BASE_URL = import.meta.env.BASE_URL?.replace(/\/$/, "") || "";
+
+  // ── تصدير فاتورة واحدة إلى Excel ──
+  const exportExcel = (id: number, invoiceNumber?: string | null) => {
+    const a = document.createElement("a");
+    a.href = `${BASE_URL}/api/invoices/${id}/export/excel`;
+    a.download = `فاتورة-${invoiceNumber ?? id}.xlsx`;
+    a.click();
+    toast.success("جاري تنزيل ملف Excel...");
+  };
+
+  // ── تصدير جميع الفواتير إلى Excel ──
+  const exportAllExcel = () => {
+    const a = document.createElement("a");
+    a.href = `${BASE_URL}/api/invoices/export/excel/all`;
+    a.download = `تقرير-الفواتير.xlsx`;
+    a.click();
+    toast.success("جاري تنزيل تقرير Excel الشامل...");
+  };
+
+  // ── طباعة / تصدير PDF لفاتورة ──
+  const printPDF = async (id: number) => {
+    try {
+      const res = await fetch(`${BASE_URL}/api/invoices/${id}`);
+      if (!res.ok) throw new Error();
+      const inv = await res.json();
+
+      const itemsRows = (inv.items ?? []).map((item: any, i: number) => `
+        <tr>
+          <td style="padding:6px 10px;border-bottom:1px solid #e5e7eb;text-align:center">${i + 1}</td>
+          <td style="padding:6px 10px;border-bottom:1px solid #e5e7eb;font-family:monospace;font-size:12px">${item.partNumber ?? "—"}</td>
+          <td style="padding:6px 10px;border-bottom:1px solid #e5e7eb">${item.description ?? "—"}</td>
+          <td style="padding:6px 10px;border-bottom:1px solid #e5e7eb;text-align:center">${item.quantity ?? 0}</td>
+          <td style="padding:6px 10px;border-bottom:1px solid #e5e7eb;text-align:center">${item.unit ?? ""}</td>
+          <td style="padding:6px 10px;border-bottom:1px solid #e5e7eb;text-align:left;font-family:monospace">${Number(item.unitCost ?? 0).toFixed(2)}</td>
+          <td style="padding:6px 10px;border-bottom:1px solid #e5e7eb;text-align:left;font-family:monospace;font-weight:600">${((item.quantity ?? 0) * (item.unitCost ?? 0)).toFixed(2)}</td>
+        </tr>`).join("");
+
+      const total = (inv.items ?? []).reduce((s: number, it: any) => s + (it.quantity ?? 0) * (it.unitCost ?? 0), 0);
+
+      const html = `<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head>
+  <meta charset="UTF-8">
+  <title>فاتورة ${inv.invoiceNumber ?? ""}</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap');
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Cairo', Arial, sans-serif; background: #fff; color: #111; padding: 32px; direction: rtl; }
+    .header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 28px; padding-bottom: 20px; border-bottom: 2px solid #111; }
+    .brand { font-size: 24px; font-weight: 700; color: #111; }
+    .brand small { display: block; font-size: 13px; font-weight: 400; color: #555; margin-top: 2px; }
+    .meta-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-bottom: 28px; background: #f9fafb; border-radius: 8px; padding: 16px; }
+    .meta-item label { display: block; font-size: 11px; color: #666; margin-bottom: 3px; }
+    .meta-item value { display: block; font-size: 14px; font-weight: 600; }
+    table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+    thead tr { background: #111; color: #fff; }
+    thead th { padding: 10px 10px; font-size: 12px; font-weight: 600; text-align: right; }
+    thead th:nth-child(1), thead th:nth-child(4), thead th:nth-child(5) { text-align: center; }
+    thead th:nth-child(6), thead th:nth-child(7) { text-align: left; }
+    tbody tr:nth-child(even) { background: #f9fafb; }
+    .total-row { font-weight: 700; background: #f3f4f6 !important; }
+    .footer { margin-top: 20px; border-top: 1px solid #e5e7eb; padding-top: 14px; font-size: 11px; color: #888; display:flex; justify-content:space-between; }
+    @media print { body { padding: 16px; } @page { margin: 1cm; } }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="brand">
+      RuknAuto
+      <small>نظام استخراج الفواتير الذكي</small>
+    </div>
+    <div style="text-align:left;font-size:12px;color:#555">
+      <div style="font-size:18px;font-weight:700;color:#111">فاتورة مشتريات</div>
+      <div style="margin-top:4px">${inv.invoiceNumber ?? "—"}</div>
+    </div>
+  </div>
+
+  <div class="meta-grid">
+    <div class="meta-item"><label>المورد</label><value>${inv.supplier ?? "—"}</value></div>
+    <div class="meta-item"><label>تاريخ الفاتورة</label><value>${inv.date ?? "—"}</value></div>
+    <div class="meta-item"><label>عدد البنود</label><value>${inv.items?.length ?? 0} بند</value></div>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>رقم القطعة</th>
+        <th>الوصف</th>
+        <th>الكمية</th>
+        <th>الوحدة</th>
+        <th>سعر الوحدة</th>
+        <th>الإجمالي</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${itemsRows}
+      <tr class="total-row">
+        <td colspan="6" style="padding:10px;text-align:right;font-size:14px">الإجمالي الكلي</td>
+        <td style="padding:10px;text-align:left;font-family:monospace;font-size:15px">${total.toFixed(2)} ر.س</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="footer">
+    <span>تم الاستخراج بواسطة RuknAuto • نظام ذكاء اصطناعي لقطع السيارات</span>
+    <span>${new Date().toLocaleDateString("ar-SA")}</span>
+  </div>
+
+  <script>window.onload = function() { window.print(); }</script>
+</body>
+</html>`;
+
+      const win = window.open("", "_blank", "width=900,height=700");
+      if (!win) { toast.error("يرجى السماح بالنوافذ المنبثقة"); return; }
+      win.document.write(html);
+      win.document.close();
+    } catch {
+      toast.error("فشل تحميل بيانات الفاتورة");
+    }
+  };
+
   return (
     <div className="space-y-5" dir="rtl">
       <div>
@@ -585,6 +708,15 @@ export default function Invoices() {
             {filteredInvoices.length} فاتورة
           </span>
         )}
+        <Button
+          variant="outline"
+          size="sm"
+          className="h-9 gap-1.5 text-xs shrink-0 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10"
+          onClick={exportAllExcel}
+        >
+          <FileSpreadsheet className="h-3.5 w-3.5" />
+          تقرير Excel شامل
+        </Button>
       </div>
 
       <Card className="bg-card">
@@ -599,7 +731,7 @@ export default function Invoices() {
                   <th className="p-3 font-medium text-center w-20">البنود</th>
                   <th className="p-3 font-medium text-right">الإجمالي</th>
                   <th className="p-3 font-medium text-right">الحالة</th>
-                  <th className="p-3 font-medium text-center w-28">إجراءات</th>
+                  <th className="p-3 font-medium text-center w-36">إجراءات</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
@@ -626,34 +758,52 @@ export default function Invoices() {
                       <InvoiceStatusBadge status={inv.status} />
                     </td>
                     <td className="p-3">
-                      <div className="flex items-center justify-center gap-1">
+                      <div className="flex items-center justify-center gap-0.5">
                         <Button 
                           variant="ghost" 
                           size="icon" 
-                          className="text-muted-foreground hover:text-foreground"
+                          className="h-8 w-8 text-muted-foreground hover:text-foreground"
                           onClick={() => handleOpenDetail(inv.id)}
                           title="عرض التفاصيل"
                         >
-                          <Eye className="h-4 w-4" />
+                          <Eye className="h-3.5 w-3.5" />
                         </Button>
                         <Button 
                           variant="ghost" 
                           size="icon" 
-                          className="text-blue-400 hover:bg-blue-500/10 hover:text-blue-300"
+                          className="h-8 w-8 text-blue-400 hover:bg-blue-500/10 hover:text-blue-300"
                           onClick={() => handleOpenEdit(inv.id)}
                           title="تعديل الفاتورة"
                         >
-                          <Pencil className="h-4 w-4" />
+                          <Pencil className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-emerald-400 hover:bg-emerald-500/10 hover:text-emerald-300"
+                          onClick={() => exportExcel(inv.id, inv.invoiceNumber)}
+                          title="تصدير Excel"
+                        >
+                          <FileDown className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-violet-400 hover:bg-violet-500/10 hover:text-violet-300"
+                          onClick={() => printPDF(inv.id)}
+                          title="طباعة / تصدير PDF"
+                        >
+                          <Printer className="h-3.5 w-3.5" />
                         </Button>
                         <Button 
                           variant="ghost" 
                           size="icon" 
-                          className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+                          className="h-8 w-8 text-destructive hover:bg-destructive/10 hover:text-destructive"
                           onClick={() => handleDelete(inv.id)}
                           disabled={deleteInvoice.isPending}
                           title="حذف الفاتورة"
                         >
-                          <Trash2 className="h-4 w-4" />
+                          <Trash2 className="h-3.5 w-3.5" />
                         </Button>
                       </div>
                     </td>
