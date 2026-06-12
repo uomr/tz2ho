@@ -67,9 +67,9 @@ function Stat({
             <span
               className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full mb-0.5 ${
                 badge.type === "up"
-                  ? "bg-red-500/10 text-red-400"
+                  ? "bg-red-500/10 text-red-600 dark:text-red-400"
                   : badge.type === "down"
-                  ? "bg-green-500/10 text-green-400"
+                  ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
                   : "bg-muted text-muted-foreground"
               }`}
             >
@@ -95,8 +95,8 @@ function AnomalyRow({ a, idx }: { a: Anomaly; idx: number }) {
         }`}
       >
         {isUp
-          ? <TrendingUp className="w-3.5 h-3.5 text-red-400" />
-          : <TrendingDown className="w-3.5 h-3.5 text-green-400" />}
+          ? <TrendingUp className="w-3.5 h-3.5 text-red-600 dark:text-red-400" />
+          : <TrendingDown className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />}
       </div>
 
       <div className="flex-1 min-w-0">
@@ -118,7 +118,7 @@ function AnomalyRow({ a, idx }: { a: Anomaly; idx: number }) {
 
           <div className="text-left shrink-0">
             <p
-              className={`text-sm font-bold ${isUp ? "text-red-400" : "text-green-400"}`}
+              className={`text-sm font-bold ${isUp ? "text-red-600 dark:text-red-400" : "text-emerald-600 dark:text-emerald-400"}`}
             >
               {isUp ? "+" : ""}{a.deviation_pct}%
             </p>
@@ -138,11 +138,11 @@ function AnomalyRow({ a, idx }: { a: Anomaly; idx: number }) {
                 highlight
                   ? isUp
                     ? "bg-red-500/8 border border-red-500/15"
-                    : "bg-green-500/8 border border-green-500/15"
+                    : "bg-emerald-500/8 border border-emerald-500/15"
                   : "bg-muted/30"
               }`}
             >
-              <p className={`text-xs font-bold ${highlight ? (isUp ? "text-red-400" : "text-green-400") : "text-foreground"}`}>
+              <p className={`text-xs font-bold ${highlight ? (isUp ? "text-red-600 dark:text-red-400" : "text-emerald-600 dark:text-emerald-400") : "text-foreground"}`}>
                 {noFormat ? val : typeof val === "number" ? val.toFixed(2) : val}
               </p>
               <p className="text-[9px] text-muted-foreground">{label}</p>

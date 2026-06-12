@@ -176,12 +176,9 @@ export default function Dashboard() {
 
       {/* ── بانر الفواتير المعلّقة ── */}
       {!isLoading && stats && stats.totalInvoices > 0 && (
-        <div
-          className="rounded-2xl p-4 flex items-center gap-4"
-          style={{ background: "#f59e0b0d", border: "1px solid #f59e0b28" }}
-        >
-          <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0" style={{ background: "#f59e0b20" }}>
-            <AlertCircle className="w-5 h-5 text-amber-400" />
+        <div className="rounded-2xl p-4 flex items-center gap-4 bg-amber-500/5 border border-amber-500/20">
+          <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 bg-amber-500/15">
+            <AlertCircle className="w-5 h-5 text-amber-600 dark:text-amber-400" />
           </div>
           <div className="flex-1">
             <p className="text-[13px] font-semibold">تحقق من سجل الفواتير</p>
@@ -190,10 +187,7 @@ export default function Dashboard() {
             </p>
           </div>
           <Link href="/invoices">
-            <button
-              className="flex items-center gap-2 px-3.5 py-2 rounded-xl text-[12px] font-semibold transition-opacity hover:opacity-80"
-              style={{ background: "#f59e0b18", color: "#f59e0b", border: "1px solid #f59e0b38" }}
-            >
+            <button className="flex items-center gap-2 px-3.5 py-2 rounded-xl text-[12px] font-semibold transition-all hover:opacity-80 bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/30">
               <RefreshCw className="w-3.5 h-3.5" />
               مراجعة الآن
             </button>
@@ -229,10 +223,7 @@ function StatCard({
           <Icon className="w-5 h-5" style={{ color }} />
         </div>
         {isPercent && !isLoading && value != null && (
-          <span
-            className="flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full"
-            style={{ background: "#10b98118", color: "#10b981" }}
-          >
+          <span className="flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">
             <TrendingUp className="w-2.5 h-2.5" />
             جيد
           </span>

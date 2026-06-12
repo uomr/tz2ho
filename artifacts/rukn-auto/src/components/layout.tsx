@@ -338,11 +338,8 @@ export function Layout({ children }: { children: React.ReactNode }) {
             <span className="font-semibold text-foreground text-sm">{pageTitle}</span>
           </div>
           <div className="flex-1" />
-          <div
-            className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium"
-            style={{ background: "#10b98112", border: "1px solid #10b98125", color: "#10b981" }}
-          >
-            <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse shrink-0" />
+          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />
             <span className="hidden sm:block">NewPoint ERP متصل</span>
           </div>
         </header>

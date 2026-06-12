@@ -17,6 +17,7 @@ import {
   AlertDialogContent, AlertDialogDescription,
   AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { RoleBadge } from "@/components/shared/RoleBadge";
 
 const BASE_URL = import.meta.env.BASE_URL?.replace(/\/$/, "") || "";
 
@@ -368,22 +369,20 @@ export default function UsersAdmin() {
                 {loading ? (
                   <tr><td colSpan={8} className="p-8 text-center text-muted-foreground">جاري التحميل...</td></tr>
                 ) : users.length === 0 ? (
-                  <tr><td colSpan={8} className="p-8 text-center text-muted-foreground">لا يوجد مستخدمون بعد</td></tr>
+                  <tr><td colSpan={8} className="p-8 text-center text-muted-foreground">
+                    <div className="flex flex-col items-center gap-2 opacity-60">
+                      <Users className="w-8 h-8 opacity-40" />
+                      <p className="text-sm">لا يوجد مستخدمون بعد</p>
+                      <p className="text-xs">أضف موظفاً جديداً من الأعلى</p>
+                    </div>
+                  </td></tr>
                 ) : users.map(u => (
                   <tr key={u.id} className={`hover:bg-muted/30 transition-colors ${!u.isActive ? "opacity-50" : ""}`}>
                     <td className="p-3 font-semibold">{u.displayName}</td>
                     <td className="p-3 font-mono text-xs text-muted-foreground">{u.username}</td>
                     <td className="p-3"><DeptBadge dept={u.department} /></td>
                     <td className="p-3 text-center">
-                      {u.role === "admin" ? (
-                        <span className="flex items-center justify-center gap-1 text-yellow-400 text-xs font-semibold">
-                          <Shield className="w-3.5 h-3.5" /> مدير
-                        </span>
-                      ) : (
-                        <span className="flex items-center justify-center gap-1 text-muted-foreground text-xs">
-                          <User className="w-3.5 h-3.5" /> موظف
-                        </span>
-                      )}
+                      <RoleBadge role={u.role} />
                     </td>
                     {/* toggle ذاكرة القطع */}
                     <td className="p-3 text-center">
@@ -405,7 +404,9 @@ export default function UsersAdmin() {
                     </td>
                     <td className="p-3 text-center">
                       <span className={`px-2 py-0.5 rounded-full text-[11px] font-semibold border ${
-                        u.isActive ? "text-green-400 bg-green-400/10 border-green-400/20" : "text-red-400 bg-red-400/10 border-red-400/20"
+                        u.isActive
+                          ? "text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border-emerald-500/20"
+                          : "text-red-600 dark:text-red-400 bg-red-500/10 border-red-500/20"
                       }`}>
                         {u.isActive ? "فعّال" : "معطّل"}
                       </span>
@@ -424,7 +425,7 @@ export default function UsersAdmin() {
                         >
                           {u.isActive ? <PowerOff className="h-3.5 w-3.5" /> : <Power className="h-3.5 w-3.5" />}
                         </Button>
-                        {u.role !== "admin" && (
+                        {u.role !== "superadmin" && (
                           <Button
                             variant="ghost"
                             size="icon"

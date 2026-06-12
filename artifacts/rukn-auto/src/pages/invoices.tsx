@@ -13,6 +13,7 @@ import {
   AlertDialogContent, AlertDialogDescription,
   AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { StatusBadge } from "@/components/shared/StatusBadge";
 
 export default function Invoices() {
   const { data: invoices, isLoading } = useListInvoices({
@@ -745,7 +746,13 @@ export default function Invoices() {
                   ))
                 ) : filteredInvoices?.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="p-8 text-center text-muted-foreground">لا توجد فواتير</td>
+                    <td colSpan={7} className="p-10 text-center text-muted-foreground">
+                      <div className="flex flex-col items-center gap-2 opacity-60">
+                        <FileText className="w-8 h-8 opacity-40" />
+                        <p className="text-sm">لا توجد فواتير</p>
+                        <p className="text-xs">{search ? "جرّب كلمة بحث أخرى" : "ابدأ باستخراج فاتورة جديدة"}</p>
+                      </div>
+                    </td>
                   </tr>
                 ) : filteredInvoices?.map((inv) => (
                   <tr key={inv.id} className="hover:bg-muted/50 transition-colors">
@@ -755,7 +762,7 @@ export default function Invoices() {
                     <td className="p-3 text-center tabular-nums">{inv.itemCount || 0}</td>
                     <td className="p-3 tabular-nums">{inv.totalAmount ? `${inv.totalAmount.toLocaleString('ar-SA', { minimumFractionDigits: 0, maximumFractionDigits: 1 })} ر.س` : '—'}</td>
                     <td className="p-3">
-                      <InvoiceStatusBadge status={inv.status} />
+                      <StatusBadge status={inv.status} />
                     </td>
                     <td className="p-3">
                       <div className="flex items-center justify-center gap-0.5">
@@ -855,7 +862,7 @@ export default function Invoices() {
                     {selectedInvoice.items?.map((item: any, idx: number) => (
                       <tr key={idx} className="hover:bg-muted/30 transition-colors">
                         <td className="p-2 text-center text-muted-foreground font-mono" style={{ direction: "ltr" }}>{idx + 1}</td>
-                        <td className="p-2 font-mono font-semibold text-emerald-400">{item.partNumber || "—"}</td>
+                        <td className="p-2 font-mono font-semibold text-emerald-600 dark:text-emerald-400">{item.partNumber || "—"}</td>
                         <td className="p-2">{item.description}</td>
                         <td className="p-2 text-center font-semibold" style={{ direction: "ltr" }}>
                           {item.quantity} {item.unit || ""}
@@ -1493,15 +1500,5 @@ export default function Invoices() {
 }
 
 function InvoiceStatusBadge({ status }: { status: string }) {
-  const map: Record<string, { label: string; cls: string }> = {
-    pending: { label: "قيد المراجعة", cls: "bg-yellow-500/10 text-yellow-400 border border-yellow-500/20" },
-    saved: { label: "محفوظة", cls: "bg-green-500/10 text-green-400 border border-green-500/20" },
-    injected: { label: "تم الحقن", cls: "bg-blue-500/10 text-blue-400 border border-blue-500/20" },
-  };
-  const badge = map[status] ?? { label: status, cls: "bg-muted text-muted-foreground border border-border" };
-  return (
-    <span className={`inline-flex px-2 py-0.5 rounded-full text-[11px] font-medium ${badge.cls}`}>
-      {badge.label}
-    </span>
-  );
+  return <StatusBadge status={status} />;
 }

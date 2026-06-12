@@ -340,14 +340,17 @@ export default function Parts() {
                 ) : paginated.length === 0 ? (
                   <tr>
                     <td colSpan={6} className="p-10 text-center text-muted-foreground">
-                      <Database className="w-8 h-8 mx-auto mb-3 opacity-20" />
-                      {search ? "لا توجد نتائج مطابقة" : "لا توجد قطع في الذاكرة"}
+                      <div className="flex flex-col items-center gap-2 opacity-60">
+                        <Database className="w-8 h-8 opacity-40" />
+                        <p className="text-sm">{search ? "لا توجد نتائج مطابقة" : "لا توجد قطع في الذاكرة"}</p>
+                        {!search && <p className="text-xs">أضف قطعة جديدة من الأعلى</p>}
+                      </div>
                     </td>
                   </tr>
                 ) : (
                   paginated.map((part) => (
                     <tr key={part.id} className="hover:bg-muted/30 transition-colors">
-                      <td className="p-3 font-mono text-sm font-semibold text-purple-300">
+                      <td className="p-3 font-mono text-sm font-semibold text-violet-600 dark:text-violet-300">
                         {part.partNumber}
                       </td>
                       <td className="p-3 font-mono text-xs text-muted-foreground">
@@ -356,7 +359,7 @@ export default function Parts() {
                       <td className="p-3 text-sm">{part.description}</td>
                       <td className="p-3 text-center">
                         {part.packFactor && part.packFactor > 1 ? (
-                          <span className="px-2 py-0.5 bg-purple-500/10 border border-purple-500/20 text-purple-300 rounded-full text-xs font-semibold">
+                          <span className="px-2 py-0.5 bg-violet-500/10 border border-violet-500/20 text-violet-600 dark:text-violet-300 rounded-full text-xs font-semibold">
                             {part.packFactor} حبة
                           </span>
                         ) : (

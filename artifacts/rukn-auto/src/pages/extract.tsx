@@ -425,7 +425,7 @@ export default function Extract() {
                         {extractedData.items?.map((item: any, idx: number) => (
                           <tr
                             key={idx}
-                            className={item.needsManualInput ? "bg-yellow-900/10" : ""}
+                            className={item.needsManualInput ? "bg-amber-500/10 dark:bg-amber-900/20" : ""}
                           >
                             <td className="p-2 w-44">
                               <Input
@@ -445,12 +445,12 @@ export default function Extract() {
                                   onChange={(e) => updateItem(idx, "description", e.target.value)}
                                   className={`h-8 ${
                                     item.memoryMatch
-                                      ? "border-purple-500/50 text-purple-200 bg-purple-950/10"
+                                      ? "border-violet-500/50 text-violet-700 dark:text-violet-200 bg-violet-500/10"
                                       : ""
                                   }`}
                                 />
                                 {item.memoryMatch && (
-                                  <div className="flex items-center gap-1 text-purple-400 px-1">
+                                  <div className="flex items-center gap-1 text-violet-600 dark:text-violet-400 px-1">
                                     <CheckCircle2 className="w-3 h-3 shrink-0" />
                                     <span className="text-[9px] font-semibold">
                                       {item.memoryConfidence}% مطابقة من الذاكرة
@@ -479,13 +479,13 @@ export default function Extract() {
                                   }
                                   className={`h-8 ${
                                     item.packFactor > 1
-                                      ? "border-purple-500/50 text-purple-200"
+                                      ? "border-violet-500/50 text-violet-700 dark:text-violet-200"
                                       : ""
                                   }`}
                                   min={1}
                                 />
                                 {item.packFactor > 1 && (
-                                  <span className="text-[9px] text-purple-300 font-bold text-center block leading-none">
+                                  <span className="text-[9px] text-violet-600 dark:text-violet-300 font-bold text-center block leading-none">
                                     ⚡ {item.quantity * item.packFactor} حبة
                                   </span>
                                 )}
@@ -511,18 +511,18 @@ export default function Extract() {
                     {/* Duplicate invoice number warning */}
                     {duplicateWarning && (
                       <div className="flex flex-col gap-3 p-4 rounded-lg bg-red-500/10 border border-red-500/30 text-sm">
-                        <div className="flex items-start gap-2 text-red-300">
+                        <div className="flex items-start gap-2 text-red-600 dark:text-red-300">
                           <span className="text-lg leading-none mt-0.5">⚠️</span>
                           <div>
                             <p className="font-bold mb-1">تكرار رقم فاتورة!</p>
-                            <p className="text-xs text-red-400/90 leading-relaxed">{duplicateWarning}</p>
+                            <p className="text-xs text-red-600/80 dark:text-red-400/90 leading-relaxed">{duplicateWarning}</p>
                           </div>
                         </div>
                         <div className="flex gap-2">
                           <Button
                             size="sm"
                             variant="outline"
-                            className="flex-1 border-red-500/40 text-red-300 hover:bg-red-500/10"
+                            className="flex-1 border-red-500/40 text-red-600 dark:text-red-300 hover:bg-red-500/10"
                             onClick={() => setDuplicateWarning(null)}
                           >
                             إلغاء — لن أحفظ
