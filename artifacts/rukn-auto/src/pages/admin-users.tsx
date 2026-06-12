@@ -281,19 +281,20 @@ export default function UsersAdmin() {
   const activeCount = users.filter(u => u.isActive).length;
 
   return (
-    <div className="space-y-5 max-w-5xl" dir="rtl">
+    <div className="space-y-4 max-w-5xl" dir="rtl">
 
-      {/* ── رأس الصفحة ── */}
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h2 className="text-xl font-bold tracking-tight">إدارة المستخدمين</h2>
-          <p className="text-sm text-muted-foreground mt-0.5">
-            {users.length} مستخدم · {activeCount} نشط
-          </p>
+      {/* ── شريط الإجراءات ── */}
+      <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <span className="font-semibold text-foreground">{users.length}</span> مستخدم
+          <span className="text-border">·</span>
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block" />
+          <span className="font-semibold text-foreground">{activeCount}</span> نشط
         </div>
-        <Button size="sm" className="gap-2 shrink-0" onClick={() => setShowForm(s => !s)}>
-          <UserPlus className="w-4 h-4" />
-          إضافة مستخدم
+        <div className="flex-1" />
+        <Button size="sm" variant="outline" className="gap-2 h-8 text-xs" onClick={() => setShowForm(s => !s)}>
+          <UserPlus className="w-3.5 h-3.5" />
+          {showForm ? "إلغاء" : "إضافة مستخدم"}
         </Button>
       </div>
 
