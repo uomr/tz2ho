@@ -9,7 +9,7 @@ const __apiDir = typeof __dirname !== "undefined"
   : path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 import { db } from "@workspace/db";
 import { invoicesTable, invoiceItemsTable, activityTable } from "@workspace/db";
-import { eq, desc, sql, inArray } from "drizzle-orm";
+import { eq, desc, sql, inArray, and } from "drizzle-orm";
 import {
   ExtractInvoiceBody,
   SaveInvoiceBody,
@@ -20,13 +20,17 @@ import {
 import { extractInvoiceFromImage } from "../lib/invoice-extractor";
 import { enrichItemsWithMemory, learnFromSavedInvoice } from "../lib/parts-memory";
 import { storageService } from "../lib/storage-service.js";
+import { requireAuth } from "../middlewares/auth.js";
 
 const router: IRouter = Router();
 
 // Store active Python RPA processes by invoice ID (includes stdin pipe for interactive correction)
 const activeProcesses = new Map<number, { proc: any; stdin: any }>();
 
-router.get("/invoices", async (req, res): Promise<void> => {
+router.get("/invoices", requireAuth, async (req, res): Promise<void> => {
+  const isSuperAdmin = req.user?.role === "superadmin";
+  const orgId = req.user?.orgId ?? null;
+
   const invoices = await db
     .select({
       id: invoicesTable.id,
@@ -39,6 +43,7 @@ router.get("/invoices", async (req, res): Promise<void> => {
       createdAt: invoicesTable.createdAt,
     })
     .from(invoicesTable)
+    .where(isSuperAdmin || orgId === null ? undefined : eq(invoicesTable.orgId, orgId))
     .orderBy(desc(invoicesTable.createdAt));
 
   if (invoices.length === 0) {
@@ -71,7 +76,7 @@ router.get("/invoices", async (req, res): Promise<void> => {
   res.json(result);
 });
 
-router.post("/invoices/extract", async (req, res): Promise<void> => {
+router.post("/invoices/extract", requireAuth, async (req, res): Promise<void> => {
   const parsed = ExtractInvoiceBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
@@ -165,7 +170,7 @@ router.post("/invoices/extract", async (req, res): Promise<void> => {
   });
 });
 
-router.get("/invoices/:id", async (req, res): Promise<void> => {
+router.get("/invoices/:id", requireAuth, async (req, res): Promise<void> => {
   const raw = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
   const params = GetInvoiceParams.safeParse({ id: parseInt(raw, 10) });
   if (!params.success) {
@@ -173,10 +178,17 @@ router.get("/invoices/:id", async (req, res): Promise<void> => {
     return;
   }
 
+  const isSuperAdmin = req.user?.role === "superadmin";
+  const orgId = req.user?.orgId ?? null;
+
   const [invoice] = await db
     .select()
     .from(invoicesTable)
-    .where(eq(invoicesTable.id, params.data.id));
+    .where(
+      isSuperAdmin || orgId === null
+        ? eq(invoicesTable.id, params.data.id)
+        : and(eq(invoicesTable.id, params.data.id), eq(invoicesTable.orgId, orgId))
+    );
 
   if (!invoice) {
     res.status(404).json({ error: "الفاتورة غير موجودة" });
@@ -197,7 +209,7 @@ router.get("/invoices/:id", async (req, res): Promise<void> => {
   });
 });
 
-router.delete("/invoices/:id", async (req, res): Promise<void> => {
+router.delete("/invoices/:id", requireAuth, async (req, res): Promise<void> => {
   const raw = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
   const params = DeleteInvoiceParams.safeParse({ id: parseInt(raw, 10) });
   if (!params.success) {
@@ -205,11 +217,18 @@ router.delete("/invoices/:id", async (req, res): Promise<void> => {
     return;
   }
 
-  await db.delete(invoicesTable).where(eq(invoicesTable.id, params.data.id));
+  const isSuperAdmin = req.user?.role === "superadmin";
+  const orgId = req.user?.orgId ?? null;
+
+  await db.delete(invoicesTable).where(
+    isSuperAdmin || orgId === null
+      ? eq(invoicesTable.id, params.data.id)
+      : and(eq(invoicesTable.id, params.data.id), eq(invoicesTable.orgId, orgId))
+  );
   res.sendStatus(204);
 });
 
-router.post("/invoices/:id/save", async (req, res): Promise<void> => {
+router.post("/invoices/:id/save", requireAuth, async (req, res): Promise<void> => {
   const raw = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
   const params = SaveInvoiceParams.safeParse({ id: parseInt(raw, 10) });
   if (!params.success) {
@@ -311,7 +330,7 @@ router.post("/invoices/:id/save", async (req, res): Promise<void> => {
   res.json({ ...invoice, items: savedItems });
 });
 
-router.post("/invoices/:id/inject", async (req, res): Promise<void> => {
+router.post("/invoices/:id/inject", requireAuth, async (req, res): Promise<void> => {
   const rawId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
   const invoiceId = parseInt(rawId, 10);
   if (isNaN(invoiceId)) {
@@ -494,7 +513,7 @@ router.post("/invoices/:id/inject", async (req, res): Promise<void> => {
 });
 
 // ── NEW: إرسال الرقم المصحح إلى محرك RPA المنتظر ──
-router.post("/invoices/:id/inject/respond", (req, res): void => {
+router.post("/invoices/:id/inject/respond", requireAuth, (req, res): void => {
   const rawId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
   const invoiceId = parseInt(rawId, 10);
   if (isNaN(invoiceId)) {
@@ -521,7 +540,7 @@ router.post("/invoices/:id/inject/respond", (req, res): void => {
   }
 });
 
-router.post("/invoices/:id/abort", async (req, res): Promise<void> => {
+router.post("/invoices/:id/abort", requireAuth, async (req, res): Promise<void> => {
   const rawId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
   const invoiceId = parseInt(rawId, 10);
   if (isNaN(invoiceId)) {

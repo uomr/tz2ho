@@ -5,14 +5,17 @@ import { Router, type IRouter } from "express";
 import bcrypt from "bcryptjs";
 import { db } from "@workspace/db";
 import { usersTable } from "@workspace/db";
-import { eq } from "drizzle-orm";
-import { requireAdmin } from "../middlewares/auth.js";
+import { eq, and } from "drizzle-orm";
+import { requireAdmin, requireSuperAdmin } from "../middlewares/auth.js";
 import { logger } from "../lib/logger.js";
 
 const router: IRouter = Router();
 
 // ── GET /api/users ───────────────────────────────────────────
-router.get("/users", requireAdmin, async (_req, res): Promise<void> => {
+// المدير يرى مستخدمي مؤسسته فقط — السوبر أدمن يرى الكل
+router.get("/users", requireAdmin, async (req, res): Promise<void> => {
+  const isSuperAdmin = req.user?.role === "superadmin";
+
   const users = await db
     .select({
       id: usersTable.id,
@@ -22,16 +25,23 @@ router.get("/users", requireAdmin, async (_req, res): Promise<void> => {
       department: usersTable.department,
       isActive: usersTable.isActive,
       canEditParts: usersTable.canEditParts,
+      orgId: usersTable.orgId,
       createdAt: usersTable.createdAt,
       lastLogin: usersTable.lastLogin,
     })
     .from(usersTable)
+    .where(
+      isSuperAdmin
+        ? undefined
+        : eq(usersTable.orgId, req.user!.orgId!)
+    )
     .orderBy(usersTable.createdAt);
 
   res.json(users);
 });
 
 // ── POST /api/users ──────────────────────────────────────────
+// Admin can create employee/admin only — superadmin role requires requireSuperAdmin
 router.post("/users", requireAdmin, async (req, res): Promise<void> => {
   const { username, password, displayName, role, department, canEditParts } = req.body;
 
@@ -41,6 +51,19 @@ router.post("/users", requireAdmin, async (req, res): Promise<void> => {
   }
   if (password.length < 6) {
     res.status(400).json({ error: "كلمة السر يجب أن تكون 6 أحرف على الأقل" });
+    return;
+  }
+
+  // منع المدير العادي من إنشاء حساب سوبر أدمن
+  const requestedRole = role || "employee";
+  if (requestedRole === "superadmin" && req.user?.role !== "superadmin") {
+    res.status(403).json({ error: "إنشاء حساب مدير المنصة يتطلب صلاحية مدير المنصة" });
+    return;
+  }
+
+  // المدير لا يستطيع إنشاء مستخدمين خارج مؤسسته
+  if (req.user?.role !== "superadmin" && !req.user?.orgId) {
+    res.status(403).json({ error: "حساب المدير غير مرتبط بمؤسسة" });
     return;
   }
 
@@ -63,10 +86,12 @@ router.post("/users", requireAdmin, async (req, res): Promise<void> => {
       username: username.trim().toLowerCase(),
       passwordHash,
       displayName: displayName.trim(),
-      role: role || "employee",
+      role: requestedRole,
       department: department?.trim() || "",
       isActive: true,
       canEditParts: canEditParts === true,
+      // السوبر أدمن يضع orgId=null، المدير العادي يربط بمؤسسته
+      orgId: req.user?.role === "superadmin" ? (req.body.orgId ?? null) : req.user!.orgId,
     })
     .returning({
       id: usersTable.id,
@@ -76,6 +101,7 @@ router.post("/users", requireAdmin, async (req, res): Promise<void> => {
       department: usersTable.department,
       isActive: usersTable.isActive,
       canEditParts: usersTable.canEditParts,
+      orgId: usersTable.orgId,
     });
 
   logger.info({ userId: user.id, username: user.username, canEditParts: user.canEditParts }, "New user created");
@@ -90,14 +116,48 @@ router.patch("/users/:id", requireAdmin, async (req, res): Promise<void> => {
     return;
   }
 
+  // جلب المستخدم المراد تعديله للتحقق من صلاحياته
+  const [targetUser] = await db
+    .select({ id: usersTable.id, role: usersTable.role, orgId: usersTable.orgId })
+    .from(usersTable)
+    .where(eq(usersTable.id, userId));
+
+  if (!targetUser) {
+    res.status(404).json({ error: "المستخدم غير موجود" });
+    return;
+  }
+
+  const isSuperAdmin = req.user?.role === "superadmin";
+
+  // المدير العادي لا يستطيع تعديل سوبر أدمن أو مستخدمين من مؤسسة أخرى
+  if (!isSuperAdmin) {
+    if (targetUser.role === "superadmin") {
+      res.status(403).json({ error: "لا يمكن تعديل حساب مدير المنصة" });
+      return;
+    }
+    if (targetUser.orgId !== req.user?.orgId) {
+      res.status(403).json({ error: "لا يمكن تعديل مستخدم من مؤسسة أخرى" });
+      return;
+    }
+  }
+
   const { displayName, role, department, isActive, password, canEditParts } = req.body;
   const updates: Record<string, unknown> = {};
 
   if (displayName)                        updates.displayName = displayName.trim();
-  if (role)                               updates.role = role;
   if (typeof department === "string")     updates.department = department.trim();
   if (typeof isActive === "boolean")      updates.isActive = isActive;
   if (typeof canEditParts === "boolean")  updates.canEditParts = canEditParts;
+
+  // التحقق من الترقية إلى سوبر أدمن — ممنوع على المدير العادي
+  if (role) {
+    if (role === "superadmin" && !isSuperAdmin) {
+      res.status(403).json({ error: "الترقية إلى مدير المنصة تتطلب صلاحية مدير المنصة" });
+      return;
+    }
+    updates.role = role;
+  }
+
   if (password) {
     if (password.length < 6) {
       res.status(400).json({ error: "كلمة السر يجب أن تكون 6 أحرف على الأقل" });
@@ -123,6 +183,7 @@ router.patch("/users/:id", requireAdmin, async (req, res): Promise<void> => {
       department: usersTable.department,
       isActive: usersTable.isActive,
       canEditParts: usersTable.canEditParts,
+      orgId: usersTable.orgId,
     });
 
   if (!updated) {
@@ -146,7 +207,39 @@ router.delete("/users/:id", requireAdmin, async (req, res): Promise<void> => {
     return;
   }
 
+  // جلب المستخدم المراد حذفه
+  const [targetUser] = await db
+    .select({ id: usersTable.id, role: usersTable.role, orgId: usersTable.orgId })
+    .from(usersTable)
+    .where(eq(usersTable.id, userId));
+
+  if (!targetUser) {
+    res.status(404).json({ error: "المستخدم غير موجود" });
+    return;
+  }
+
+  const isSuperAdmin = req.user?.role === "superadmin";
+
+  // لا أحد يستطيع حذف سوبر أدمن — حتى السوبر أدمن نفسه (لا يحذف نفسه — محمي أعلاه)
+  if (targetUser.role === "superadmin" && !isSuperAdmin) {
+    res.status(403).json({ error: "لا يمكن حذف حساب مدير المنصة" });
+    return;
+  }
+
+  // المدير العادي لا يستطيع حذف مستخدمين من مؤسسة أخرى
+  if (!isSuperAdmin && targetUser.orgId !== req.user?.orgId) {
+    res.status(403).json({ error: "لا يمكن حذف مستخدم من مؤسسة أخرى" });
+    return;
+  }
+
+  // المدير لا يستطيع حذف مدير آخر في نفس المؤسسة (اختياري — حماية إضافية)
+  if (!isSuperAdmin && targetUser.role === "admin") {
+    res.status(403).json({ error: "لا يمكن للمدير حذف مدير آخر — تواصل مع مدير المنصة" });
+    return;
+  }
+
   await db.delete(usersTable).where(eq(usersTable.id, userId));
+  logger.info({ deletedUserId: userId, deletedBy: req.user?.userId }, "User deleted");
   res.sendStatus(204);
 });
 

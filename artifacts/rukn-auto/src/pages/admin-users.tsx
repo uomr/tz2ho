@@ -12,6 +12,11 @@ import {
   Clock, Eye, EyeOff, Database, Trash2, AlertTriangle
 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel,
+  AlertDialogContent, AlertDialogDescription,
+  AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 const BASE_URL = import.meta.env.BASE_URL?.replace(/\/$/, "") || "";
 
@@ -522,37 +527,35 @@ export default function UsersAdmin() {
         </DialogContent>
       </Dialog>
       {/* ── نافذة تأكيد الحذف ── */}
-      <Dialog open={!!deleteTarget} onOpenChange={open => !open && setDeleteTarget(null)}>
-        <DialogContent className="max-w-sm bg-card border-border rounded-xl" dir="rtl">
-          <DialogHeader className="border-b border-border pb-4">
-            <DialogTitle className="text-base font-bold flex items-center gap-2 text-red-400">
+      <AlertDialog open={!!deleteTarget} onOpenChange={open => !open && setDeleteTarget(null)}>
+        <AlertDialogContent className="max-w-sm" dir="rtl">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 text-destructive">
               <AlertTriangle className="w-4 h-4" />
-              تأكيد الحذف
-            </DialogTitle>
-          </DialogHeader>
-          <div className="py-4 space-y-3">
-            <p className="text-sm text-foreground">
-              هل أنت متأكد من حذف حساب <span className="font-bold text-foreground">"{deleteTarget?.displayName}"</span> ؟
-            </p>
-            <p className="text-xs text-muted-foreground">
-              لا يمكن التراجع عن هذه العملية. جميع بيانات الدخول ستُحذف نهائياً.
-            </p>
-          </div>
-          <div className="flex justify-end gap-2 border-t border-border/50 pt-3">
-            <Button variant="outline" size="sm" onClick={() => setDeleteTarget(null)} disabled={deleting}>
-              إلغاء
-            </Button>
-            <Button
-              size="sm"
-              className="bg-red-500 hover:bg-red-600 text-white"
+              تأكيد حذف الحساب
+            </AlertDialogTitle>
+            <AlertDialogDescription className="space-y-2 text-right">
+              <span className="block">
+                هل أنت متأكد من حذف حساب{" "}
+                <span className="font-bold text-foreground">"{deleteTarget?.displayName}"</span>؟
+              </span>
+              <span className="block text-xs text-muted-foreground">
+                لا يمكن التراجع عن هذه العملية. جميع بيانات الدخول ستُحذف نهائياً.
+              </span>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex-row-reverse gap-2">
+            <AlertDialogCancel disabled={deleting}>إلغاء</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive hover:bg-destructive/90 text-destructive-foreground flex-1 rounded-xl"
               onClick={handleDeleteConfirm}
               disabled={deleting}
             >
               {deleting ? "جاري الحذف..." : "حذف الحساب"}
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
