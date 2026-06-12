@@ -18,11 +18,14 @@ interface ModelOption {
   id: string;
   label: string;
   badge: string;
+  description?: string;
+  provider?: "qwen" | "google" | "meta";
   speed: number;
   quality: number;
   costPer1kIn: number;
   costPer1kOut: number;
   supportsJson: boolean;
+  contextK?: number;
 }
 
 interface SettingsData {
@@ -309,6 +312,14 @@ export default function AdminSettings() {
             {data.models.map(m => {
               const isActive = m.id === data.activeModel;
               const isPicked = m.id === selected;
+              const providerColor =
+                m.provider === "google" ? "text-blue-400 bg-blue-400/10 border-blue-400/20" :
+                m.provider === "meta"   ? "text-purple-400 bg-purple-400/10 border-purple-400/20" :
+                                          "text-orange-400 bg-orange-400/10 border-orange-400/20";
+              const providerLabel =
+                m.provider === "google" ? "Google" :
+                m.provider === "meta"   ? "Meta" :
+                                          "Qwen";
               return (
                 <button
                   key={m.id}
@@ -319,18 +330,38 @@ export default function AdminSettings() {
                       : "border-border bg-card/60 hover:bg-card"
                   }`}
                 >
-                  {isActive && (
-                    <span className="absolute top-2 left-2 flex items-center gap-1 text-[10px] text-green-400 font-semibold bg-green-400/10 border border-green-400/20 px-1.5 py-0.5 rounded-full">
-                      <span className="w-1 h-1 rounded-full bg-green-400" />
-                      نشط
-                    </span>
-                  )}
-                  {isPicked && !isActive && (
-                    <CheckCircle2 className="absolute top-2 left-2 w-4 h-4 text-primary" />
-                  )}
+                  {/* شارات الحالة */}
+                  <div className="absolute top-2 left-2 flex items-center gap-1">
+                    {isActive && (
+                      <span className="flex items-center gap-1 text-[10px] text-green-400 font-semibold bg-green-400/10 border border-green-400/20 px-1.5 py-0.5 rounded-full">
+                        <span className="w-1 h-1 rounded-full bg-green-400" />
+                        نشط
+                      </span>
+                    )}
+                    {isPicked && !isActive && (
+                      <CheckCircle2 className="w-4 h-4 text-primary" />
+                    )}
+                  </div>
 
-                  <p className="font-bold text-sm text-foreground mb-0.5">{m.label}</p>
-                  <p className="text-[11px] text-primary/70 font-medium mb-3">{m.badge}</p>
+                  {/* العنوان والمزوّد */}
+                  <div className="flex items-start gap-2 mb-1 pr-1">
+                    <div className="flex-1 min-w-0">
+                      <p className="font-bold text-sm text-foreground truncate">{m.label}</p>
+                    </div>
+                    {m.provider && (
+                      <span className={`shrink-0 text-[10px] font-bold border px-1.5 py-0.5 rounded-full ${providerColor}`}>
+                        {providerLabel}
+                      </span>
+                    )}
+                  </div>
+
+                  <p className="text-[11px] text-primary/70 font-medium mb-1">{m.badge}</p>
+
+                  {m.description && (
+                    <p className="text-[10px] text-muted-foreground/70 leading-relaxed mb-3 line-clamp-2">
+                      {m.description}
+                    </p>
+                  )}
 
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
@@ -341,25 +372,43 @@ export default function AdminSettings() {
                     </div>
                     <div className="flex items-center justify-between">
                       <span className="text-[11px] text-muted-foreground flex items-center gap-1">
-                        <Star className="w-3 h-3" /> جودة
+                        <Star className="w-3 h-3" /> دقة العربي
                       </span>
                       <StarRating value={m.quality} />
                     </div>
                     <div className="flex items-center justify-between">
                       <span className="text-[11px] text-muted-foreground flex items-center gap-1">
-                        <DollarSign className="w-3 h-3" /> تكلفة/1K
+                        <DollarSign className="w-3 h-3" /> سعر الدخل/1K
                       </span>
                       <span className="text-[11px] font-mono text-foreground/70">
-                        ${(m.costPer1kIn * 1000).toFixed(3)}
+                        ${(m.costPer1kIn * 1000).toFixed(4)}
+                      </span>
+                    </div>
+                    {m.contextK && (
+                      <div className="flex items-center justify-between">
+                        <span className="text-[11px] text-muted-foreground flex items-center gap-1">
+                          <HardDrive className="w-3 h-3" /> سياق
+                        </span>
+                        <span className="text-[11px] font-mono text-foreground/50">
+                          {m.contextK >= 1000 ? `${m.contextK}K` : `${m.contextK}K`}
+                        </span>
+                      </div>
+                    )}
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] text-muted-foreground flex items-center gap-1">
+                        <Brain className="w-3 h-3" /> JSON مدمج
+                      </span>
+                      <span className={`text-[10px] font-semibold ${m.supportsJson ? "text-green-400" : "text-muted-foreground/50"}`}>
+                        {m.supportsJson ? "✓ نعم" : "تلقائي"}
                       </span>
                     </div>
                   </div>
 
-                  {/* شريط التكلفة التقريبية بالاستهلاك الحالي */}
+                  {/* تكلفة مشابهة بالاستهلاك الحالي */}
                   {usage.extractions > 0 && (
                     <div className="mt-3 pt-3 border-t border-border/40">
                       <div className="flex justify-between items-center mb-1">
-                        <span className="text-[10px] text-muted-foreground">تكلفة مشابهة</span>
+                        <span className="text-[10px] text-muted-foreground">تكلفة بنفس الاستهلاك</span>
                         <span className="text-[10px] font-mono text-foreground/60">
                           ${(
                             (usage.tokensIn / 1000) * m.costPer1kIn +

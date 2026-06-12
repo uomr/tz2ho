@@ -1,6 +1,1 @@
-- [Vector Embeddings Setup](vector-embeddings.md) — pgvector enabled, HNSW index on parts.embedding, hybrid search (vector+fuzzy) in parts-memory.ts
-- [Storage Architecture](storage-architecture.md) — Object Storage مُجرَّد: Local FS الآن, S3 لاحقاً بتغيير env var فقط
-- [Invoice Image Duality](invoice-image-duality.md) — فواتير قديمة imageBase64، جديدة imageUrl — كلاهما مدعوم في GET /invoices/:id
-- [API Server Validation](api-server-validation.md) — never import zod/zod-v4 directly in api-server routes; esbuild fails — use manual validation or @workspace/api-zod
-- [Multi-tenancy Design](multi-tenancy.md) — application-level org_id filtering per request; superadmin has orgId=null and role="superadmin"
-- [Org Sequence Fix](org-sequence-fix.md) — after manual INSERT organizations with explicit id, must run setval to fix the serial sequence
+- [OpenRouter vision models — Arabic OCR](openrouter-vision-models.md) — verified 6 models 2026-06-12; Qwen VL series best for Arabic; two Google models had wrong pricing in original code

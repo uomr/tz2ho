@@ -83,7 +83,8 @@ function extractJson(text: string): string {
   return "";
 }
 
-// قراءة النموذج النشط من قاعدة البيانات في كل استخراج
+// النموذج الاحتياطي: يُستخدم عند rate-limit أو عدم إيجاد النموذج الأساسي
+// google/gemini-3.1-flash-lite: موثوق، يدعم JSON، متاح دائماً من Google
 const FALLBACK_MODEL = "google/gemini-3.1-flash-lite";
 
 export async function extractInvoiceFromImage(
