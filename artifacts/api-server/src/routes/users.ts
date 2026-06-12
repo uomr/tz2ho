@@ -141,6 +141,12 @@ router.patch("/users/:id", requireAdmin, async (req, res): Promise<void> => {
     }
   }
 
+  // لا يمكن لأي مستخدم تعطيل نفسه — يُقفل نفسه خارج النظام
+  if (userId === req.user?.userId && typeof req.body.isActive === "boolean" && !req.body.isActive) {
+    res.status(400).json({ error: "لا يمكنك تعطيل حسابك الخاص" });
+    return;
+  }
+
   const { displayName, role, department, isActive, password, canEditParts } = req.body;
   const updates: Record<string, unknown> = {};
 

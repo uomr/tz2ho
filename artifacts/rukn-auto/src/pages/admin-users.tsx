@@ -48,7 +48,7 @@ function PartsToggle({
 
   if (isAdmin) {
     return (
-      <span className="text-[11px] text-yellow-400/70 font-medium">دائماً ✓</span>
+      <span className="text-[11px] text-amber-600 dark:text-amber-400/80 font-medium">دائماً ✓</span>
     );
   }
 
@@ -98,7 +98,7 @@ interface UserRecord {
 }
 
 export default function UsersAdmin() {
-  const { token } = useAuth();
+  const { token, user: currentUser, isSuperAdmin } = useAuth();
   const [users, setUsers] = useState<UserRecord[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -376,9 +376,18 @@ export default function UsersAdmin() {
                       <p className="text-xs">أضف موظفاً جديداً من الأعلى</p>
                     </div>
                   </td></tr>
-                ) : users.map(u => (
-                  <tr key={u.id} className={`hover:bg-muted/30 transition-colors ${!u.isActive ? "opacity-50" : ""}`}>
-                    <td className="p-3 font-semibold">{u.displayName}</td>
+                ) : users.map(u => {
+                  const isSelf = u.id === currentUser?.id;
+                  return (
+                  <tr key={u.id} className={`hover:bg-muted/30 transition-colors ${!u.isActive ? "opacity-40" : ""} ${isSelf ? "bg-primary/5 border-r-2 border-r-primary" : ""}`}>
+                    <td className="p-3">
+                      <div className="flex items-center gap-2">
+                        <span className="font-semibold">{u.displayName}</span>
+                        {isSelf && (
+                          <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-primary/15 text-primary border border-primary/25">أنت</span>
+                        )}
+                      </div>
+                    </td>
                     <td className="p-3 font-mono text-xs text-muted-foreground">{u.username}</td>
                     <td className="p-3"><DeptBadge dept={u.department} /></td>
                     <td className="p-3 text-center">
@@ -390,7 +399,7 @@ export default function UsersAdmin() {
                         <PartsToggle
                           userId={u.id}
                           canEditParts={u.canEditParts}
-                          isAdmin={u.role === "admin"}
+                          isAdmin={u.role === "admin" || u.role === "superadmin"}
                           onChanged={fetchUsers}
                           headers={headers}
                         />
@@ -416,15 +425,17 @@ export default function UsersAdmin() {
                         <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(u)} title="تعديل">
                           <Edit className="h-3.5 w-3.5" />
                         </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className={`h-7 w-7 ${u.isActive ? "text-red-400/60 hover:text-red-400" : "text-green-400/60 hover:text-green-400"}`}
-                          onClick={() => handleToggleActive(u)}
-                          title={u.isActive ? "تعطيل الحساب" : "تفعيل الحساب"}
-                        >
-                          {u.isActive ? <PowerOff className="h-3.5 w-3.5" /> : <Power className="h-3.5 w-3.5" />}
-                        </Button>
+                        {u.id !== currentUser?.id && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className={`h-7 w-7 ${u.isActive ? "text-red-400/60 hover:text-red-400" : "text-emerald-400/60 hover:text-emerald-400"}`}
+                            onClick={() => handleToggleActive(u)}
+                            title={u.isActive ? "تعطيل الحساب" : "تفعيل الحساب"}
+                          >
+                            {u.isActive ? <PowerOff className="h-3.5 w-3.5" /> : <Power className="h-3.5 w-3.5" />}
+                          </Button>
+                        )}
                         {u.role !== "superadmin" && (
                           <Button
                             variant="ghost"
@@ -439,7 +450,8 @@ export default function UsersAdmin() {
                       </div>
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -471,18 +483,24 @@ export default function UsersAdmin() {
             </div>
             <div className="space-y-1.5">
               <label className="text-xs font-semibold text-muted-foreground">الدور</label>
-              <select
-                value={editRole}
-                onChange={e => setEditRole(e.target.value)}
-                className="w-full h-9 px-3 rounded-md bg-background border border-border text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
-              >
-                <option value="employee">موظف</option>
-                <option value="admin">مدير</option>
-              </select>
+              {editUser?.role === "superadmin" ? (
+                <div className="w-full h-9 px-3 rounded-md bg-muted/40 border border-border/50 text-sm flex items-center text-muted-foreground">
+                  مدير المنصة — لا يمكن تغيير هذا الدور
+                </div>
+              ) : (
+                <select
+                  value={editRole}
+                  onChange={e => setEditRole(e.target.value)}
+                  className="w-full h-9 px-3 rounded-md bg-background border border-border text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
+                >
+                  <option value="employee">موظف</option>
+                  <option value="admin">مدير</option>
+                </select>
+              )}
             </div>
 
             {/* صلاحية ذاكرة القطع في التعديل */}
-            {editRole === "employee" && (
+            {editRole === "employee" && editUser?.role !== "superadmin" && (
               <label className="flex items-center gap-3 p-3 rounded-lg bg-muted/40 border border-border/50 cursor-pointer hover:bg-muted/60 transition-colors">
                 <input
                   type="checkbox"
