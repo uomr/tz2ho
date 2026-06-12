@@ -5,7 +5,7 @@ import { Router, type IRouter } from "express";
 import bcrypt from "bcryptjs";
 import { db } from "@workspace/db";
 import { usersTable } from "@workspace/db";
-import { eq, and } from "drizzle-orm";
+import { eq, and, ne } from "drizzle-orm";
 import { requireAdmin, requireSuperAdmin } from "../middlewares/auth.js";
 import { logger } from "../lib/logger.js";
 
@@ -15,6 +15,15 @@ const router: IRouter = Router();
 // المدير يرى مستخدمي مؤسسته فقط — السوبر أدمن يرى الكل
 router.get("/users", requireAdmin, async (req, res): Promise<void> => {
   const isSuperAdmin = req.user?.role === "superadmin";
+
+  // المدير العادي: يرى مستخدمي مؤسسته فقط (بدون سوبر أدمن)
+  // السوبر أدمن: يرى الجميع
+  const whereClause = isSuperAdmin
+    ? undefined
+    : and(
+        eq(usersTable.orgId, req.user!.orgId!),
+        ne(usersTable.role, "superadmin")
+      );
 
   const users = await db
     .select({
@@ -30,11 +39,7 @@ router.get("/users", requireAdmin, async (req, res): Promise<void> => {
       lastLogin: usersTable.lastLogin,
     })
     .from(usersTable)
-    .where(
-      isSuperAdmin
-        ? undefined
-        : eq(usersTable.orgId, req.user!.orgId!)
-    )
+    .where(whereClause)
     .orderBy(usersTable.createdAt);
 
   res.json(users);

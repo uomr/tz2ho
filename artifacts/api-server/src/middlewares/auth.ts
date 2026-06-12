@@ -80,10 +80,13 @@ export function requireSuperAdmin(req: Request, res: Response, next: NextFunctio
   });
 }
 
-/** Middleware: مدير أو موظف لديه صلاحية تعديل القطع */
+/** Middleware: صلاحية تعديل ذاكرة القطع
+ *  - superadmin: دائماً مسموح
+ *  - admin/employee: يعتمد على حقل canEditParts (يمكن للسوبر أدمن سحبه حتى من المدير)
+ */
 export function requirePartsAccess(req: Request, res: Response, next: NextFunction): void {
   requireAuth(req, res, () => {
-    if (req.user?.role === "admin" || req.user?.canEditParts) {
+    if (req.user?.role === "superadmin" || req.user?.canEditParts) {
       next();
     } else {
       res.status(403).json({ error: "ليس لديك صلاحية تعديل ذاكرة القطع — تواصل مع المدير" });

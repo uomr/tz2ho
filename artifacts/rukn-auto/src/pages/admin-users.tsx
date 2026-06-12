@@ -1,54 +1,85 @@
 /**
- * صفحة إدارة المستخدمين — للمدير فقط
+ * admin-users.tsx — إدارة المستخدمين
+ * المدير: يرى مستخدمي مؤسسته فقط (بدون سوبر أدمن)
+ * السوبر أدمن: يرى الجميع + يمنح/يسحب صلاحية القطع من أي دور
  */
 import { useState, useEffect } from "react";
 import { useAuth, getAuthHeader } from "@/contexts/AuthContext";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import {
-  Users, Plus, Edit, Power, PowerOff, Shield, User,
-  Clock, Eye, EyeOff, Database, Trash2, AlertTriangle
+  UserPlus, Pencil, Power, PowerOff, Trash2,
+  Eye, EyeOff, Database, AlertTriangle, Clock,
+  Users, ShieldCheck, User, Shield,
 } from "lucide-react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle,
+} from "@/components/ui/dialog";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel,
   AlertDialogContent, AlertDialogDescription,
   AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { RoleBadge } from "@/components/shared/RoleBadge";
 
 const BASE_URL = import.meta.env.BASE_URL?.replace(/\/$/, "") || "";
 
-function DeptBadge({ dept }: { dept: string }) {
-  if (!dept || dept === "admin") return null;
+// ── أيقونة الدور ──────────────────────────────────────────
+function RoleIcon({ role }: { role: string }) {
+  if (role === "superadmin") return <ShieldCheck className="w-3.5 h-3.5 text-amber-400" />;
+  if (role === "admin") return <Shield className="w-3.5 h-3.5 text-violet-400" />;
+  return <User className="w-3.5 h-3.5 text-emerald-400" />;
+}
+
+const ROLE_LABELS: Record<string, string> = {
+  superadmin: "مدير المنصة",
+  admin: "مدير",
+  employee: "موظف",
+};
+const ROLE_COLORS: Record<string, string> = {
+  superadmin: "text-amber-400 bg-amber-400/8 border-amber-400/20",
+  admin: "text-violet-400 bg-violet-400/8 border-violet-400/20",
+  employee: "text-emerald-400 bg-emerald-400/8 border-emerald-400/20",
+};
+
+function RolePill({ role }: { role: string }) {
   return (
-    <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold border text-primary/80 bg-primary/8 border-primary/15">
-      {dept}
+    <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-medium border ${ROLE_COLORS[role] ?? "text-muted-foreground bg-muted border-border"}`}>
+      <RoleIcon role={role} />
+      {ROLE_LABELS[role] ?? role}
     </span>
   );
 }
 
-/** مفتاح تبديل صلاحية ذاكرة القطع */
+// ── تبديل صلاحية القطع ───────────────────────────────────
 function PartsToggle({
   userId,
   canEditParts,
-  isAdmin,
+  targetRole,
+  viewerIsSuperAdmin,
   onChanged,
   headers,
 }: {
   userId: number;
   canEditParts: boolean;
-  isAdmin: boolean;
+  targetRole: string;
+  viewerIsSuperAdmin: boolean;
   onChanged: () => void;
   headers: Record<string, string>;
 }) {
   const [busy, setBusy] = useState(false);
 
-  if (isAdmin) {
+  // superadmin دائماً مسموح ولا يحتاج تبديل
+  if (targetRole === "superadmin") {
+    return <span className="text-[11px] text-muted-foreground/50 select-none">—</span>;
+  }
+
+  // المدير العادي لا يستطيع سحب صلاحية مدير آخر
+  const canToggle = viewerIsSuperAdmin || targetRole === "employee";
+
+  if (!canToggle) {
     return (
-      <span className="text-[11px] text-amber-600 dark:text-amber-400/80 font-medium">دائماً ✓</span>
+      <span className="text-[11px] text-amber-500/70 font-medium">دائماً</span>
     );
   }
 
@@ -61,7 +92,7 @@ function PartsToggle({
         body: JSON.stringify({ canEditParts: !canEditParts }),
       });
       if (res.ok) {
-        toast.success(canEditParts ? "تم سحب صلاحية ذاكرة القطع" : "تم منح صلاحية ذاكرة القطع ✓");
+        toast.success(canEditParts ? "سُحبت صلاحية ذاكرة القطع" : "مُنحت صلاحية ذاكرة القطع");
         onChanged();
       }
     } finally {
@@ -73,13 +104,12 @@ function PartsToggle({
     <button
       onClick={toggle}
       disabled={busy}
-      title={canEditParts ? "انقر لسحب الصلاحية" : "انقر لمنح الصلاحية"}
-      className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none disabled:opacity-50
-        ${canEditParts ? "bg-primary" : "bg-muted-foreground/25"}`}
+      title={canEditParts ? "سحب الصلاحية" : "منح الصلاحية"}
+      className={`relative inline-flex h-5 w-9 items-center rounded-full transition-all duration-200 focus:outline-none disabled:opacity-40
+        ${canEditParts ? "bg-primary shadow-[0_0_8px_theme(colors.primary/30%)]" : "bg-muted-foreground/20"}`}
     >
-      <span
-        className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow-sm transition-transform
-          ${canEditParts ? "translate-x-4" : "translate-x-0.5"}`}
+      <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow-sm transition-transform duration-200
+        ${canEditParts ? "translate-x-[18px]" : "translate-x-[2px]"}`}
       />
     </button>
   );
@@ -111,6 +141,7 @@ export default function UsersAdmin() {
   const [newDept, setNewDept] = useState("");
   const [newCanEditParts, setNewCanEditParts] = useState(false);
   const [adding, setAdding] = useState(false);
+  const [showForm, setShowForm] = useState(false);
 
   // نموذج تعديل
   const [editUser, setEditUser] = useState<UserRecord | null>(null);
@@ -139,6 +170,12 @@ export default function UsersAdmin() {
 
   useEffect(() => { fetchUsers(); }, []);
 
+  const resetForm = () => {
+    setNewUsername(""); setNewPassword(""); setNewDisplayName("");
+    setNewRole("employee"); setNewDept(""); setNewCanEditParts(false);
+    setShowForm(false);
+  };
+
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newUsername || !newPassword || !newDisplayName) return;
@@ -158,9 +195,8 @@ export default function UsersAdmin() {
       });
       const data = await res.json();
       if (!res.ok) { toast.error(data.error); return; }
-      toast.success(`تم إنشاء حساب "${newDisplayName}" بنجاح ✓`);
-      setNewUsername(""); setNewPassword(""); setNewDisplayName("");
-      setNewRole("employee"); setNewDept(""); setNewCanEditParts(false);
+      toast.success(`تم إنشاء "${newDisplayName}"`);
+      resetForm();
       fetchUsers();
     } finally {
       setAdding(false);
@@ -174,7 +210,7 @@ export default function UsersAdmin() {
       body: JSON.stringify({ isActive: !u.isActive }),
     });
     if (res.ok) {
-      toast.success(u.isActive ? `تم تعطيل حساب ${u.displayName}` : `تم تفعيل حساب ${u.displayName}`);
+      toast.success(u.isActive ? `عُطِّل حساب ${u.displayName}` : `فُعِّل حساب ${u.displayName}`);
       fetchUsers();
     }
   };
@@ -186,6 +222,7 @@ export default function UsersAdmin() {
     setEditDept(u.department);
     setEditCanEditParts(u.canEditParts);
     setEditPassword("");
+    setShowEditPass(false);
   };
 
   const handleSaveEdit = async (e: React.FormEvent) => {
@@ -197,7 +234,7 @@ export default function UsersAdmin() {
         displayName: editDisplayName,
         role: editRole,
         department: editDept,
-        canEditParts: editRole === "admin" ? true : editCanEditParts,
+        canEditParts: editRole === "admin" && !isSuperAdmin ? true : editCanEditParts,
       };
       if (editPassword) body.password = editPassword;
       const res = await fetch(`${BASE_URL}/api/users/${editUser.id}`, {
@@ -207,7 +244,7 @@ export default function UsersAdmin() {
       });
       const data = await res.json();
       if (!res.ok) { toast.error(data.error); return; }
-      toast.success("تم حفظ التعديلات ✓");
+      toast.success("حُفظت التعديلات");
       setEditUser(null);
       fetchUsers();
     } finally {
@@ -224,7 +261,7 @@ export default function UsersAdmin() {
         headers,
       });
       if (res.ok || res.status === 204) {
-        toast.success(`تم حذف حساب ${deleteTarget.displayName}`);
+        toast.success(`حُذف حساب ${deleteTarget.displayName}`);
         setDeleteTarget(null);
         fetchUsers();
       } else {
@@ -241,42 +278,44 @@ export default function UsersAdmin() {
     return new Date(d).toLocaleDateString("ar-SA", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
   };
 
+  const activeCount = users.filter(u => u.isActive).length;
+
   return (
-    <div className="space-y-5" dir="rtl">
-      <div>
-        <h2 className="text-2xl font-bold tracking-tight flex items-center gap-2">
-          <Users className="w-6 h-6 text-primary" />
-          إدارة المستخدمين
-        </h2>
-        <p className="text-muted-foreground text-sm mt-1">
-          إنشاء حسابات الموظفين وتحديد صلاحياتهم لتفعيل الذاكرة الذكية.
-        </p>
+    <div className="space-y-5 max-w-5xl" dir="rtl">
+
+      {/* ── رأس الصفحة ── */}
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h2 className="text-xl font-bold tracking-tight">إدارة المستخدمين</h2>
+          <p className="text-sm text-muted-foreground mt-0.5">
+            {users.length} مستخدم · {activeCount} نشط
+          </p>
+        </div>
+        <Button size="sm" className="gap-2 shrink-0" onClick={() => setShowForm(s => !s)}>
+          <UserPlus className="w-4 h-4" />
+          إضافة مستخدم
+        </Button>
       </div>
 
-      {/* ── نموذج إضافة مستخدم ── */}
-      <Card className="bg-card border-border">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-sm font-semibold flex items-center gap-2">
-            <Plus className="w-4 h-4 text-primary" />
-            إضافة موظف جديد
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleAdd} className="space-y-3">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+      {/* ── نموذج الإضافة (قابل للطي) ── */}
+      {showForm && (
+        <div className="rounded-xl border border-border bg-card p-5 space-y-4">
+          <h3 className="text-sm font-semibold text-foreground">حساب جديد</h3>
+          <form onSubmit={handleAdd} className="space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-muted-foreground">الاسم الكامل *</label>
-                <Input value={newDisplayName} onChange={e => setNewDisplayName(e.target.value)} placeholder="مثال: أحمد محمد" className="h-9" />
+                <label className="text-xs text-muted-foreground font-medium">الاسم الكامل</label>
+                <Input value={newDisplayName} onChange={e => setNewDisplayName(e.target.value)} placeholder="أحمد محمد" className="h-9" />
               </div>
               <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-muted-foreground">اسم المستخدم (للدخول) *</label>
-                <Input value={newUsername} onChange={e => setNewUsername(e.target.value.toLowerCase())} placeholder="مثال: ahmed" className="h-9 font-mono" dir="ltr" />
+                <label className="text-xs text-muted-foreground font-medium">اسم المستخدم</label>
+                <Input value={newUsername} onChange={e => setNewUsername(e.target.value.toLowerCase())} placeholder="ahmed" className="h-9 font-mono" dir="ltr" />
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-muted-foreground">كلمة السر *</label>
+                <label className="text-xs text-muted-foreground font-medium">كلمة السر</label>
                 <div className="relative">
                   <Input
                     type={showNewPass ? "text" : "password"}
@@ -291,23 +330,16 @@ export default function UsersAdmin() {
                   </button>
                 </div>
               </div>
-
               <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-muted-foreground">القسم <span className="text-muted-foreground/40">(اختياري)</span></label>
-                <Input
-                  value={newDept}
-                  onChange={e => setNewDept(e.target.value)}
-                  placeholder="مثال: تويوتا ولكزس"
-                  className="h-9"
-                />
+                <label className="text-xs text-muted-foreground font-medium">القسم <span className="opacity-50">(اختياري)</span></label>
+                <Input value={newDept} onChange={e => setNewDept(e.target.value)} placeholder="مثال: تويوتا" className="h-9" />
               </div>
-
               <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-muted-foreground">الدور</label>
+                <label className="text-xs text-muted-foreground font-medium">الدور</label>
                 <select
                   value={newRole}
                   onChange={e => setNewRole(e.target.value)}
-                  className="w-full h-9 px-3 rounded-md bg-background border border-border text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
+                  className="w-full h-9 px-3 rounded-md bg-background border border-border text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
                 >
                   <option value="employee">موظف</option>
                   <option value="admin">مدير</option>
@@ -315,219 +347,223 @@ export default function UsersAdmin() {
               </div>
             </div>
 
-            {/* صلاحية ذاكرة القطع */}
             {newRole === "employee" && (
-              <label className="flex items-center gap-3 p-3 rounded-lg bg-muted/40 border border-border/50 cursor-pointer hover:bg-muted/60 transition-colors">
+              <label className="flex items-center gap-3 p-3 rounded-lg bg-muted/30 border border-border/40 cursor-pointer hover:bg-muted/50 transition-colors w-fit">
                 <input
                   type="checkbox"
                   checked={newCanEditParts}
                   onChange={e => setNewCanEditParts(e.target.checked)}
                   className="w-4 h-4 rounded accent-primary"
                 />
-                <div className="flex items-center gap-2">
-                  <Database className="w-4 h-4 text-primary/70" />
-                  <div>
-                    <p className="text-xs font-semibold text-foreground">صلاحية ذاكرة القطع</p>
-                    <p className="text-[11px] text-muted-foreground">يمكنه إضافة وتعديل وحذف القطع في الذاكرة</p>
-                  </div>
-                </div>
+                <span className="flex items-center gap-2 text-sm">
+                  <Database className="w-4 h-4 text-primary/60" />
+                  صلاحية ذاكرة القطع
+                </span>
               </label>
             )}
 
-            <div className="flex justify-end">
-              <Button type="submit" disabled={adding || !newUsername || !newPassword || !newDisplayName} size="sm" className="gap-2">
-                <Plus className="w-4 h-4" />
+            <div className="flex justify-end gap-2 pt-1">
+              <Button type="button" variant="ghost" size="sm" onClick={resetForm}>إلغاء</Button>
+              <Button type="submit" size="sm" disabled={adding || !newUsername || !newPassword || !newDisplayName}>
                 {adding ? "جاري الإنشاء..." : "إنشاء الحساب"}
               </Button>
             </div>
           </form>
-        </CardContent>
-      </Card>
+        </div>
+      )}
 
-      {/* ── قائمة المستخدمين ── */}
-      <Card className="bg-card">
-        <CardContent className="p-0">
+      {/* ── جدول المستخدمين ── */}
+      <div className="rounded-xl border border-border bg-card overflow-hidden">
+        {loading ? (
+          <div className="p-12 text-center text-sm text-muted-foreground">جاري التحميل...</div>
+        ) : users.length === 0 ? (
+          <div className="p-12 text-center space-y-2">
+            <Users className="w-10 h-10 text-muted-foreground/20 mx-auto" />
+            <p className="text-sm text-muted-foreground">لا يوجد مستخدمون بعد</p>
+          </div>
+        ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm text-right">
-              <thead className="bg-muted border-b border-border">
-                <tr>
-                  <th className="p-3 font-medium">الاسم</th>
-                  <th className="p-3 font-medium">اسم المستخدم</th>
-                  <th className="p-3 font-medium">القسم</th>
-                  <th className="p-3 font-medium text-center">الدور</th>
-                  <th className="p-3 font-medium text-center">
-                    <span className="flex items-center justify-center gap-1">
-                      <Database className="w-3.5 h-3.5" /> القطع
+              <thead>
+                <tr className="border-b border-border bg-muted/40">
+                  <th className="px-4 py-3 text-xs font-medium text-muted-foreground">المستخدم</th>
+                  <th className="px-4 py-3 text-xs font-medium text-muted-foreground">الدور</th>
+                  <th className="px-4 py-3 text-xs font-medium text-muted-foreground text-center">
+                    <span className="inline-flex items-center gap-1 justify-center">
+                      <Database className="w-3 h-3" /> القطع
                     </span>
                   </th>
-                  <th className="p-3 font-medium text-center">آخر دخول</th>
-                  <th className="p-3 font-medium text-center">الحالة</th>
-                  <th className="p-3 font-medium text-center">إجراءات</th>
+                  <th className="px-4 py-3 text-xs font-medium text-muted-foreground text-center">آخر دخول</th>
+                  <th className="px-4 py-3 text-xs font-medium text-muted-foreground text-center">الحالة</th>
+                  <th className="px-4 py-3 text-xs font-medium text-muted-foreground text-center"></th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-border">
-                {loading ? (
-                  <tr><td colSpan={8} className="p-8 text-center text-muted-foreground">جاري التحميل...</td></tr>
-                ) : users.length === 0 ? (
-                  <tr><td colSpan={8} className="p-8 text-center text-muted-foreground">
-                    <div className="flex flex-col items-center gap-2 opacity-60">
-                      <Users className="w-8 h-8 opacity-40" />
-                      <p className="text-sm">لا يوجد مستخدمون بعد</p>
-                      <p className="text-xs">أضف موظفاً جديداً من الأعلى</p>
-                    </div>
-                  </td></tr>
-                ) : users.map(u => {
+              <tbody className="divide-y divide-border/50">
+                {users.map(u => {
                   const isSelf = u.id === currentUser?.id;
                   return (
-                  <tr key={u.id} className={`hover:bg-muted/30 transition-colors ${!u.isActive ? "opacity-40" : ""} ${isSelf ? "bg-primary/5 border-r-2 border-r-primary" : ""}`}>
-                    <td className="p-3">
-                      <div className="flex items-center gap-2">
-                        <span className="font-semibold">{u.displayName}</span>
-                        {isSelf && (
-                          <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-primary/15 text-primary border border-primary/25">أنت</span>
-                        )}
-                      </div>
-                    </td>
-                    <td className="p-3 font-mono text-xs text-muted-foreground">{u.username}</td>
-                    <td className="p-3"><DeptBadge dept={u.department} /></td>
-                    <td className="p-3 text-center">
-                      <RoleBadge role={u.role} />
-                    </td>
-                    {/* toggle ذاكرة القطع */}
-                    <td className="p-3 text-center">
-                      <div className="flex justify-center">
-                        <PartsToggle
-                          userId={u.id}
-                          canEditParts={u.canEditParts}
-                          isAdmin={u.role === "admin" || u.role === "superadmin"}
-                          onChanged={fetchUsers}
-                          headers={headers}
-                        />
-                      </div>
-                    </td>
-                    <td className="p-3 text-center text-xs text-muted-foreground">
-                      <span className="flex items-center justify-center gap-1">
-                        <Clock className="w-3 h-3" />
-                        {formatDate(u.lastLogin)}
-                      </span>
-                    </td>
-                    <td className="p-3 text-center">
-                      <span className={`px-2 py-0.5 rounded-full text-[11px] font-semibold border ${
-                        u.isActive
-                          ? "text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border-emerald-500/20"
-                          : "text-red-600 dark:text-red-400 bg-red-500/10 border-red-500/20"
-                      }`}>
-                        {u.isActive ? "فعّال" : "معطّل"}
-                      </span>
-                    </td>
-                    <td className="p-3">
-                      <div className="flex items-center justify-center gap-1">
-                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(u)} title="تعديل">
-                          <Edit className="h-3.5 w-3.5" />
-                        </Button>
-                        {u.id !== currentUser?.id && (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className={`h-7 w-7 ${u.isActive ? "text-red-400/60 hover:text-red-400" : "text-emerald-400/60 hover:text-emerald-400"}`}
-                            onClick={() => handleToggleActive(u)}
-                            title={u.isActive ? "تعطيل الحساب" : "تفعيل الحساب"}
+                    <tr
+                      key={u.id}
+                      className={`transition-colors hover:bg-muted/20 ${!u.isActive ? "opacity-40" : ""} ${isSelf ? "bg-primary/4" : ""}`}
+                    >
+                      {/* الاسم */}
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-2.5">
+                          <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0
+                            ${u.role === "superadmin" ? "bg-amber-400/15 text-amber-400" : u.role === "admin" ? "bg-violet-400/15 text-violet-400" : "bg-emerald-400/15 text-emerald-400"}`}>
+                            {u.displayName.charAt(0)}
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-1.5">
+                              <span className="font-medium text-[13px]">{u.displayName}</span>
+                              {isSelf && (
+                                <span className="text-[10px] px-1.5 py-0.5 rounded bg-primary/15 text-primary font-medium border border-primary/20">أنت</span>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-2 mt-0.5">
+                              <span className="text-[11px] font-mono text-muted-foreground/60">{u.username}</span>
+                              {u.department && (
+                                <span className="text-[11px] text-muted-foreground/50">{u.department}</span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </td>
+
+                      {/* الدور */}
+                      <td className="px-4 py-3">
+                        <RolePill role={u.role} />
+                      </td>
+
+                      {/* صلاحية القطع */}
+                      <td className="px-4 py-3 text-center">
+                        <div className="flex justify-center">
+                          <PartsToggle
+                            userId={u.id}
+                            canEditParts={u.canEditParts}
+                            targetRole={u.role}
+                            viewerIsSuperAdmin={isSuperAdmin}
+                            onChanged={fetchUsers}
+                            headers={headers}
+                          />
+                        </div>
+                      </td>
+
+                      {/* آخر دخول */}
+                      <td className="px-4 py-3 text-center">
+                        <span className="text-[11px] text-muted-foreground/60 inline-flex items-center gap-1 justify-center">
+                          <Clock className="w-3 h-3" />
+                          {formatDate(u.lastLogin)}
+                        </span>
+                      </td>
+
+                      {/* الحالة */}
+                      <td className="px-4 py-3 text-center">
+                        <span className={`inline-flex items-center gap-1.5 text-[11px] font-medium`}>
+                          <span className={`w-1.5 h-1.5 rounded-full ${u.isActive ? "bg-emerald-400" : "bg-red-400/70"}`} />
+                          {u.isActive ? "نشط" : "معطّل"}
+                        </span>
+                      </td>
+
+                      {/* الإجراءات */}
+                      <td className="px-4 py-3">
+                        <div className="flex items-center justify-center gap-0.5">
+                          <button
+                            onClick={() => openEdit(u)}
+                            title="تعديل"
+                            className="h-7 w-7 rounded-md flex items-center justify-center text-muted-foreground/50 hover:text-foreground hover:bg-muted/60 transition-colors"
                           >
-                            {u.isActive ? <PowerOff className="h-3.5 w-3.5" /> : <Power className="h-3.5 w-3.5" />}
-                          </Button>
-                        )}
-                        {u.role !== "superadmin" && (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-7 w-7 text-red-500/40 hover:text-red-500 hover:bg-red-500/10"
-                            onClick={() => setDeleteTarget(u)}
-                            title="حذف الحساب"
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </Button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
+                            <Pencil className="h-3.5 w-3.5" />
+                          </button>
+                          {u.id !== currentUser?.id && (
+                            <button
+                              onClick={() => handleToggleActive(u)}
+                              title={u.isActive ? "تعطيل" : "تفعيل"}
+                              className={`h-7 w-7 rounded-md flex items-center justify-center transition-colors
+                                ${u.isActive ? "text-muted-foreground/50 hover:text-red-400 hover:bg-red-400/8" : "text-muted-foreground/50 hover:text-emerald-400 hover:bg-emerald-400/8"}`}
+                            >
+                              {u.isActive ? <PowerOff className="h-3.5 w-3.5" /> : <Power className="h-3.5 w-3.5" />}
+                            </button>
+                          )}
+                          {u.role !== "superadmin" && u.id !== currentUser?.id && (
+                            <button
+                              onClick={() => setDeleteTarget(u)}
+                              title="حذف"
+                              className="h-7 w-7 rounded-md flex items-center justify-center text-muted-foreground/40 hover:text-red-400 hover:bg-red-400/8 transition-colors"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
                   );
                 })}
               </tbody>
             </table>
           </div>
-        </CardContent>
-      </Card>
+        )}
+      </div>
 
       {/* ── نافذة التعديل ── */}
       <Dialog open={!!editUser} onOpenChange={open => !open && setEditUser(null)}>
-        <DialogContent className="max-w-md bg-card border-border rounded-xl" dir="rtl">
-          <DialogHeader className="border-b border-border pb-4">
-            <DialogTitle className="text-base font-bold flex items-center gap-2">
-              <Edit className="w-4 h-4 text-primary" />
-              تعديل بيانات {editUser?.displayName}
+        <DialogContent className="max-w-sm bg-card border-border rounded-xl" dir="rtl">
+          <DialogHeader>
+            <DialogTitle className="text-base font-semibold">
+              تعديل — {editUser?.displayName}
             </DialogTitle>
           </DialogHeader>
-          <form onSubmit={handleSaveEdit} className="space-y-4 py-3">
+          <form onSubmit={handleSaveEdit} className="space-y-3.5">
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-muted-foreground">الاسم الكامل</label>
+              <label className="text-xs text-muted-foreground font-medium">الاسم الكامل</label>
               <Input value={editDisplayName} onChange={e => setEditDisplayName(e.target.value)} className="h-9" />
             </div>
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-muted-foreground">القسم <span className="text-muted-foreground/40">(اختياري)</span></label>
-              <Input
-                value={editDept}
-                onChange={e => setEditDept(e.target.value)}
-                placeholder="مثال: تويوتا ولكزس"
-                className="h-9"
-              />
+              <label className="text-xs text-muted-foreground font-medium">القسم <span className="opacity-50">(اختياري)</span></label>
+              <Input value={editDept} onChange={e => setEditDept(e.target.value)} placeholder="مثال: تويوتا" className="h-9" />
             </div>
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-muted-foreground">الدور</label>
-              {editUser?.role === "superadmin" ? (
-                <div className="w-full h-9 px-3 rounded-md bg-muted/40 border border-border/50 text-sm flex items-center text-muted-foreground">
-                  مدير المنصة — لا يمكن تغيير هذا الدور
-                </div>
-              ) : (
+
+            {editUser?.role !== "superadmin" && (
+              <div className="space-y-1.5">
+                <label className="text-xs text-muted-foreground font-medium">الدور</label>
                 <select
                   value={editRole}
                   onChange={e => setEditRole(e.target.value)}
-                  className="w-full h-9 px-3 rounded-md bg-background border border-border text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
+                  className="w-full h-9 px-3 rounded-md bg-background border border-border text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
                 >
                   <option value="employee">موظف</option>
                   <option value="admin">مدير</option>
                 </select>
-              )}
-            </div>
+              </div>
+            )}
 
-            {/* صلاحية ذاكرة القطع في التعديل */}
-            {editRole === "employee" && editUser?.role !== "superadmin" && (
-              <label className="flex items-center gap-3 p-3 rounded-lg bg-muted/40 border border-border/50 cursor-pointer hover:bg-muted/60 transition-colors">
+            {/* صلاحية القطع: تظهر للموظفين دائماً، وللمديرين عند السوبر أدمن فقط */}
+            {editUser?.role !== "superadmin" && (editRole === "employee" || isSuperAdmin) && (
+              <label className="flex items-center gap-3 p-3 rounded-lg bg-muted/30 border border-border/40 cursor-pointer hover:bg-muted/50 transition-colors">
                 <input
                   type="checkbox"
-                  checked={editCanEditParts}
+                  checked={editRole === "admin" && !isSuperAdmin ? true : editCanEditParts}
+                  disabled={editRole === "admin" && !isSuperAdmin}
                   onChange={e => setEditCanEditParts(e.target.checked)}
                   className="w-4 h-4 rounded accent-primary"
                 />
-                <div className="flex items-center gap-2">
-                  <Database className="w-4 h-4 text-primary/70" />
-                  <div>
-                    <p className="text-xs font-semibold text-foreground">صلاحية ذاكرة القطع</p>
-                    <p className="text-[11px] text-muted-foreground">يمكنه إضافة وتعديل وحذف القطع</p>
-                  </div>
-                </div>
+                <span className="flex items-center gap-2 text-sm">
+                  <Database className="w-4 h-4 text-primary/60" />
+                  صلاحية ذاكرة القطع
+                </span>
               </label>
             )}
 
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-muted-foreground">
-                كلمة سر جديدة <span className="text-muted-foreground/50">(اتركها فارغة للإبقاء)</span>
+              <label className="text-xs text-muted-foreground font-medium">
+                كلمة سر جديدة <span className="opacity-50">(فارغة = بدون تغيير)</span>
               </label>
               <div className="relative">
                 <Input
                   type={showEditPass ? "text" : "password"}
                   value={editPassword}
                   onChange={e => setEditPassword(e.target.value)}
-                  placeholder="اترك فارغاً لعدم التغيير"
+                  placeholder="اتركها فارغة للإبقاء"
                   className="h-9 pl-9"
                   dir="ltr"
                 />
@@ -536,41 +572,37 @@ export default function UsersAdmin() {
                 </button>
               </div>
             </div>
-            <div className="flex justify-end gap-2 pt-2 border-t border-border/50">
-              <Button type="button" variant="outline" size="sm" onClick={() => setEditUser(null)} disabled={saving}>إلغاء</Button>
+
+            <div className="flex justify-end gap-2 pt-1 border-t border-border/40">
+              <Button type="button" variant="ghost" size="sm" onClick={() => setEditUser(null)} disabled={saving}>إلغاء</Button>
               <Button type="submit" size="sm" disabled={saving}>
-                {saving ? "جاري الحفظ..." : "حفظ التعديلات"}
+                {saving ? "جاري الحفظ..." : "حفظ"}
               </Button>
             </div>
           </form>
         </DialogContent>
       </Dialog>
+
       {/* ── نافذة تأكيد الحذف ── */}
       <AlertDialog open={!!deleteTarget} onOpenChange={open => !open && setDeleteTarget(null)}>
         <AlertDialogContent className="max-w-sm" dir="rtl">
           <AlertDialogHeader>
-            <AlertDialogTitle className="flex items-center gap-2 text-destructive">
+            <AlertDialogTitle className="flex items-center gap-2 text-destructive text-base">
               <AlertTriangle className="w-4 h-4" />
-              تأكيد حذف الحساب
+              تأكيد الحذف
             </AlertDialogTitle>
-            <AlertDialogDescription className="space-y-2 text-right">
-              <span className="block">
-                هل أنت متأكد من حذف حساب{" "}
-                <span className="font-bold text-foreground">"{deleteTarget?.displayName}"</span>؟
-              </span>
-              <span className="block text-xs text-muted-foreground">
-                لا يمكن التراجع عن هذه العملية. جميع بيانات الدخول ستُحذف نهائياً.
-              </span>
+            <AlertDialogDescription className="text-right text-sm">
+              سيُحذف حساب <span className="font-semibold text-foreground">"{deleteTarget?.displayName}"</span> نهائياً ولا يمكن التراجع.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="flex-row-reverse gap-2">
             <AlertDialogCancel disabled={deleting}>إلغاء</AlertDialogCancel>
             <AlertDialogAction
-              className="bg-destructive hover:bg-destructive/90 text-destructive-foreground flex-1 rounded-xl"
+              className="bg-destructive hover:bg-destructive/90 text-destructive-foreground"
               onClick={handleDeleteConfirm}
               disabled={deleting}
             >
-              {deleting ? "جاري الحذف..." : "حذف الحساب"}
+              {deleting ? "جاري الحذف..." : "حذف"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
