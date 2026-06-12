@@ -126,6 +126,30 @@ export default function Extract() {
     }
   };
 
+  const handleDiscard = () => {
+    if (!extractedData?.invoiceId) {
+      setExtractedData(null);
+      setPages([]);
+      return;
+    }
+    deleteInvoice.mutate(
+      { id: extractedData.invoiceId },
+      {
+        onSuccess: () => {
+          queryClient.invalidateQueries({ queryKey: getListInvoicesQueryKey() });
+          setExtractedData(null);
+          setPages([]);
+          toast.info("تم تجاهل الفاتورة وحذفها");
+        },
+        onError: () => {
+          setExtractedData(null);
+          setPages([]);
+          toast.info("تم تجاهل الفاتورة");
+        },
+      }
+    );
+  };
+
   const handleSave = (forceOverride = false) => {
     if (!extractedData) return;
     setDuplicateWarning(null);
@@ -524,10 +548,23 @@ export default function Extract() {
                       </div>
                     )}
 
-                    <div className="flex justify-end">
+                    <div className="flex justify-between items-center">
+                      <Button
+                        variant="ghost"
+                        onClick={handleDiscard}
+                        disabled={deleteInvoice.isPending || saveInvoice.isPending}
+                        className="gap-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                      >
+                        {deleteInvoice.isPending ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <Trash2 className="w-4 h-4" />
+                        )}
+                        تجاهل وابدأ من جديد
+                      </Button>
                       <Button
                         onClick={() => handleSave()}
-                        disabled={saveInvoice.isPending}
+                        disabled={saveInvoice.isPending || deleteInvoice.isPending}
                         className="gap-2"
                       >
                         {saveInvoice.isPending ? (
