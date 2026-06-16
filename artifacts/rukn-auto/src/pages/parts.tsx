@@ -162,7 +162,7 @@ export default function Parts() {
 
   const SortIcon = ({ k }: { k: SortKey }) =>
     sortKey === k ? (
-      <span className={`text-primary text-[10px] font-mono ${sortDir === "desc" ? "opacity-100" : "opacity-60"}`}>
+      <span className={`text-primary text-xs font-mono ${sortDir === "desc" ? "opacity-100" : "opacity-60"}`}>
         {sortDir === "desc" ? "↓" : "↑"}
       </span>
     ) : (
@@ -197,7 +197,7 @@ export default function Parts() {
                   value={newPartNumber}
                   onChange={e => setNewPartNumber(e.target.value)}
                   placeholder="الكود المعتمد لدينا"
-                  className="font-mono text-purple-300 h-9"
+                  className="font-mono text-purple-300 h-10"
                 />
               </div>
               <div className="space-y-1.5">
@@ -209,7 +209,7 @@ export default function Parts() {
                   value={newOriginalPartNumber}
                   onChange={e => setNewOriginalPartNumber(e.target.value)}
                   placeholder="الرقم كما يطبعه المورد"
-                  className="font-mono h-9"
+                  className="font-mono h-10"
                 />
               </div>
             </div>
@@ -222,7 +222,7 @@ export default function Parts() {
                   value={newDescription}
                   onChange={e => setNewDescription(e.target.value)}
                   placeholder="وصف القطعة المعتمد في النظام"
-                  className="h-9"
+                  className="h-10"
                 />
               </div>
               <div className="space-y-1.5">
@@ -258,7 +258,7 @@ export default function Parts() {
           <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="بحث في الذاكرة..."
-            className="pr-10 h-9"
+            className="pr-10 h-10"
             value={search}
             onChange={e => handleSearch(e.target.value)}
           />
@@ -350,13 +350,13 @@ export default function Parts() {
                 ) : (
                   paginated.map((part) => (
                     <tr key={part.id} className="hover:bg-muted/30 transition-colors">
-                      <td className="p-3 font-mono text-sm font-semibold text-violet-600 dark:text-violet-300">
+                      <td className="px-4 py-3.5 font-mono text-sm font-semibold text-violet-600 dark:text-violet-300">
                         {part.partNumber}
                       </td>
-                      <td className="p-3 font-mono text-xs text-muted-foreground">
+                      <td className="px-4 py-3.5 font-mono text-xs text-muted-foreground">
                         {part.originalPartNumber || "—"}
                       </td>
-                      <td className="p-3 text-sm">{part.description}</td>
+                      <td className="px-4 py-3.5 text-sm">{part.description}</td>
                       <td className="p-3 text-center">
                         {part.packFactor && part.packFactor > 1 ? (
                           <span className="px-2 py-0.5 bg-violet-500/10 border border-violet-500/20 text-violet-600 dark:text-violet-300 rounded-full text-xs font-semibold">

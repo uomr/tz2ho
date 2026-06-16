@@ -159,7 +159,7 @@ export default function Register() {
                     />
                   </div>
                   {orgSlug && (
-                    <p className="text-[10px] text-muted-foreground mt-1">
+                    <p className="text-[11px] text-muted-foreground mt-1">
                       المعرّف: <span className="font-mono text-primary">{orgSlug}</span> — يجب أن يكون فريداً
                     </p>
                   )}
@@ -184,9 +184,9 @@ export default function Register() {
                   <div className="flex items-center justify-between">
                     <div>
                       <p className={`text-xs font-bold ${PLANS[0].color}`}>{PLANS[0].label}</p>
-                      <p className="text-[10px] text-muted-foreground mt-0.5">{PLANS[0].desc}</p>
+                      <p className="text-[11px] text-muted-foreground mt-0.5">{PLANS[0].desc}</p>
                     </div>
-                    <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${PLANS[0].bg} ${PLANS[0].color}`}>
+                    <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full border ${PLANS[0].bg} ${PLANS[0].color}`}>
                       {PLANS[0].badge}
                     </span>
                   </div>
@@ -249,7 +249,7 @@ export default function Register() {
                     className="h-10 font-mono"
                     dir="ltr"
                   />
-                  <p className="text-[10px] text-muted-foreground mt-1">أحرف إنجليزية صغيرة وأرقام وشرطة سفلية فقط</p>
+                  <p className="text-[11px] text-muted-foreground mt-1">أحرف إنجليزية صغيرة وأرقام وشرطة سفلية فقط</p>
                 </div>
 
                 <div>

@@ -333,7 +333,7 @@ export default function AdminSettings() {
                   {/* شارات الحالة */}
                   <div className="absolute top-2 left-2 flex items-center gap-1">
                     {isActive && (
-                      <span className="flex items-center gap-1 text-[10px] text-green-400 font-semibold bg-green-400/10 border border-green-400/20 px-1.5 py-0.5 rounded-full">
+                      <span className="flex items-center gap-1 text-[11px] text-green-400 font-semibold bg-green-400/10 border border-green-400/20 px-1.5 py-0.5 rounded-full">
                         <span className="w-1 h-1 rounded-full bg-green-400" />
                         نشط
                       </span>
@@ -349,7 +349,7 @@ export default function AdminSettings() {
                       <p className="font-bold text-sm text-foreground truncate">{m.label}</p>
                     </div>
                     {m.provider && (
-                      <span className={`shrink-0 text-[10px] font-bold border px-1.5 py-0.5 rounded-full ${providerColor}`}>
+                      <span className={`shrink-0 text-[11px] font-bold border px-1.5 py-0.5 rounded-full ${providerColor}`}>
                         {providerLabel}
                       </span>
                     )}
@@ -358,7 +358,7 @@ export default function AdminSettings() {
                   <p className="text-[11px] text-primary/70 font-medium mb-1">{m.badge}</p>
 
                   {m.description && (
-                    <p className="text-[10px] text-muted-foreground/70 leading-relaxed mb-3 line-clamp-2">
+                    <p className="text-[11px] text-muted-foreground/70 leading-relaxed mb-3 line-clamp-2">
                       {m.description}
                     </p>
                   )}
@@ -398,7 +398,7 @@ export default function AdminSettings() {
                       <span className="text-[11px] text-muted-foreground flex items-center gap-1">
                         <Brain className="w-3 h-3" /> JSON مدمج
                       </span>
-                      <span className={`text-[10px] font-semibold ${m.supportsJson ? "text-green-400" : "text-muted-foreground/50"}`}>
+                      <span className={`text-[11px] font-semibold ${m.supportsJson ? "text-green-400" : "text-muted-foreground/50"}`}>
                         {m.supportsJson ? "✓ نعم" : "تلقائي"}
                       </span>
                     </div>
@@ -408,8 +408,8 @@ export default function AdminSettings() {
                   {usage.extractions > 0 && (
                     <div className="mt-3 pt-3 border-t border-border/40">
                       <div className="flex justify-between items-center mb-1">
-                        <span className="text-[10px] text-muted-foreground">تكلفة بنفس الاستهلاك</span>
-                        <span className="text-[10px] font-mono text-foreground/60">
+                        <span className="text-[11px] text-muted-foreground">تكلفة بنفس الاستهلاك</span>
+                        <span className="text-[11px] font-mono text-foreground/60">
                           ${(
                             (usage.tokensIn / 1000) * m.costPer1kIn +
                             (usage.tokensOut / 1000) * m.costPer1kOut
@@ -481,7 +481,7 @@ export default function AdminSettings() {
                 <div key={label} className="bg-muted/30 rounded-xl p-3 text-center">
                   <Icon className="w-3.5 h-3.5 mx-auto mb-1.5 text-muted-foreground" />
                   <p className="text-base font-bold text-foreground">{val}</p>
-                  <p className="text-[10px] text-muted-foreground mt-0.5">{label}</p>
+                  <p className="text-[11px] text-muted-foreground mt-0.5">{label}</p>
                 </div>
               ))}
             </div>

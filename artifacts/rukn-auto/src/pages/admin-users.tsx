@@ -44,7 +44,7 @@ const ROLE_COLORS: Record<string, string> = {
 
 function RolePill({ role }: { role: string }) {
   return (
-    <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-medium border ${ROLE_COLORS[role] ?? "text-muted-foreground bg-muted border-border"}`}>
+    <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium border ${ROLE_COLORS[role] ?? "text-muted-foreground bg-muted border-border"}`}>
       <RoleIcon role={role} />
       {ROLE_LABELS[role] ?? role}
     </span>
@@ -71,7 +71,7 @@ function PartsToggle({
 
   // superadmin دائماً مسموح ولا يحتاج تبديل
   if (targetRole === "superadmin") {
-    return <span className="text-[11px] text-muted-foreground/50 select-none">—</span>;
+    return <span className="text-xs text-muted-foreground/50 select-none">—</span>;
   }
 
   // المدير العادي لا يستطيع سحب صلاحية مدير آخر
@@ -79,7 +79,7 @@ function PartsToggle({
 
   if (!canToggle) {
     return (
-      <span className="text-[11px] text-amber-500/70 font-medium">دائماً</span>
+      <span className="text-xs text-amber-500/70 font-medium">دائماً</span>
     );
   }
 
@@ -311,7 +311,7 @@ export default function UsersAdmin() {
         </div>
         <div className="flex-1" />
         {(!isSuperAdmin || activeOrgId) && (
-          <Button size="sm" variant="outline" className="gap-2 h-8 text-xs" onClick={() => setShowForm(s => !s)}>
+          <Button size="sm" variant="outline" className="gap-2 h-9 text-xs" onClick={() => setShowForm(s => !s)}>
             <UserPlus className="w-3.5 h-3.5" />
             {showForm ? "إلغاء" : "إضافة مستخدم"}
           </Button>
@@ -326,7 +326,7 @@ export default function UsersAdmin() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <label className="text-xs text-muted-foreground font-medium">الاسم الكامل</label>
-                <Input value={newDisplayName} onChange={e => setNewDisplayName(e.target.value)} placeholder="أحمد محمد" className="h-9" />
+                <Input value={newDisplayName} onChange={e => setNewDisplayName(e.target.value)} placeholder="أحمد محمد" className="h-10" />
               </div>
               <div className="space-y-1.5">
                 <label className="text-xs text-muted-foreground font-medium">اسم المستخدم</label>
@@ -334,12 +334,12 @@ export default function UsersAdmin() {
                   value={newUsername} 
                   onChange={e => setNewUsername(e.target.value.toLowerCase().replace(/\s+/g, ''))} 
                   placeholder="ahmed" 
-                  className="h-9 font-mono" 
+                  className="h-10 font-mono" 
                   dir="ltr" 
                   pattern="[a-zA-Z0-9_.-]+" 
                   title="أحرف إنجليزية، أرقام، شرطة، نقطة فقط"
                 />
-                <p className="text-[10px] text-muted-foreground">أحرف إنجليزية وأرقام فقط (للدخول)</p>
+                <p className="text-xs text-muted-foreground">أحرف إنجليزية وأرقام فقط (للدخول)</p>
               </div>
             </div>
 
@@ -352,7 +352,7 @@ export default function UsersAdmin() {
                     value={newPassword}
                     onChange={e => setNewPassword(e.target.value)}
                     placeholder="6 أحرف على الأقل"
-                    className="h-9 pl-9"
+                    className="h-10 pl-9"
                     dir="ltr"
                   />
                   <button type="button" onClick={() => setShowNewPass(s => !s)} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground/50 hover:text-muted-foreground">
@@ -362,14 +362,14 @@ export default function UsersAdmin() {
               </div>
               <div className="space-y-1.5">
                 <label className="text-xs text-muted-foreground font-medium">القسم <span className="opacity-50">(اختياري)</span></label>
-                <Input value={newDept} onChange={e => setNewDept(e.target.value)} placeholder="مثال: تويوتا" className="h-9" />
+                <Input value={newDept} onChange={e => setNewDept(e.target.value)} placeholder="مثال: تويوتا" className="h-10" />
               </div>
               <div className="space-y-1.5">
                 <label className="text-xs text-muted-foreground font-medium">الدور</label>
                 <select
                   value={newRole}
                   onChange={e => setNewRole(e.target.value)}
-                  className="w-full h-9 px-3 rounded-md bg-background border border-border text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+                  className="w-full h-10 px-3 rounded-md bg-background border border-border text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
                 >
                   <option value="employee">موظف</option>
                   <option value="admin">مدير</option>
@@ -438,38 +438,38 @@ export default function UsersAdmin() {
                         className={`transition-colors hover:bg-muted/20 ${!u.isActive ? "opacity-40" : ""} ${isSelf ? "bg-primary/4" : ""}`}
                       >
                         {/* الاسم */}
-                        <td className="px-4 py-3">
+                        <td className="px-4 py-3.5">
                           <div className="flex items-center gap-2.5">
-                            <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0
+                            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold shrink-0
                               ${u.role === "superadmin" ? "bg-amber-400/15 text-amber-400" : u.role === "admin" ? "bg-violet-400/15 text-violet-400" : "bg-emerald-400/15 text-emerald-400"}`}>
                               {u.displayName.charAt(0)}
                             </div>
                             <div>
                               <div className="flex items-center gap-1.5">
-                                <span className="font-medium text-[13px]">{u.displayName}</span>
+                                <span className="font-medium text-sm">{u.displayName}</span>
                                 {isSelf && (
-                                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-primary/15 text-primary font-medium border border-primary/20">أنت</span>
+                                  <span className="text-[11px] px-1.5 py-0.5 rounded bg-primary/15 text-primary font-medium border border-primary/20">أنت</span>
                                 )}
                               </div>
                               <div className="flex items-center gap-2 mt-0.5">
-                                <span className="text-[11px] font-mono text-muted-foreground/60">{u.username}</span>
+                                <span className="text-xs font-mono text-muted-foreground/60">{u.username}</span>
                                 {u.department && (
-                                  <span className="text-[11px] text-muted-foreground/50">{u.department}</span>
+                                  <span className="text-xs text-muted-foreground/50">{u.department}</span>
                                 )}
                               </div>
                               {/* إظهار اسم المؤسسة لمدير المنصة عند عرض الكل إذا لم تكن مقسمة لمجموعات أو للتأكيد */}
                               {!isGrouped && isSuperAdmin && !activeOrgId && (
                                 <div className="mt-1">
                                   {u.orgName ? (
-                                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20">
+                                    <span className="text-[11px] px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20">
                                       المؤسسة: {u.orgName}
                                     </span>
                                   ) : u.role === "superadmin" ? (
-                                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-500 border border-amber-500/20">
+                                    <span className="text-[11px] px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-500 border border-amber-500/20">
                                       مدير منصة (Global)
                                     </span>
                                   ) : (
-                                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-red-500/10 text-red-400 border border-red-500/20">
+                                    <span className="text-[11px] px-1.5 py-0.5 rounded bg-red-500/10 text-red-400 border border-red-500/20">
                                       غير مرتبط بمؤسسة!
                                     </span>
                                   )}
@@ -480,12 +480,12 @@ export default function UsersAdmin() {
                         </td>
 
                         {/* الدور */}
-                        <td className="px-4 py-3">
+                        <td className="px-4 py-3.5">
                           <RolePill role={u.role} />
                         </td>
 
                         {/* صلاحية القطع */}
-                        <td className="px-4 py-3 text-center">
+                        <td className="px-4 py-3.5 text-center">
                           <div className="flex justify-center">
                             <PartsToggle
                               userId={u.id}
@@ -499,23 +499,23 @@ export default function UsersAdmin() {
                         </td>
 
                         {/* آخر دخول */}
-                        <td className="px-4 py-3 text-center">
-                          <span className="text-[11px] text-muted-foreground/60 inline-flex items-center gap-1 justify-center">
+                        <td className="px-4 py-3.5 text-center">
+                          <span className="text-xs text-muted-foreground/60 inline-flex items-center gap-1 justify-center">
                             <Clock className="w-3 h-3" />
                             {formatDate(u.lastLogin)}
                           </span>
                         </td>
 
                         {/* الحالة */}
-                        <td className="px-4 py-3 text-center">
-                          <span className={`inline-flex items-center gap-1.5 text-[11px] font-medium`}>
+                        <td className="px-4 py-3.5 text-center">
+                          <span className={`inline-flex items-center gap-1.5 text-xs font-medium`}>
                             <span className={`w-1.5 h-1.5 rounded-full ${u.isActive ? "bg-emerald-400" : "bg-red-400/70"}`} />
                             {u.isActive ? "نشط" : "معطّل"}
                           </span>
                         </td>
 
                         {/* الإجراءات */}
-                        <td className="px-4 py-3">
+                        <td className="px-4 py-3.5">
                           <div className="flex items-center justify-center gap-0.5">
                             <button
                               onClick={() => openEdit(u)}
@@ -591,7 +591,7 @@ export default function UsersAdmin() {
                               <span className="font-semibold text-sm text-foreground">
                                 {isGlobal ? "مدراء المنصة والمستخدمين العائمين (Global)" : `المؤسسة: ${group.name || "مؤسسة محذوفة"}`}
                               </span>
-                              <span className="text-[10px] bg-muted px-2 py-0.5 rounded-full text-muted-foreground mr-2">
+                              <span className="text-[11px] bg-muted px-2 py-0.5 rounded-full text-muted-foreground mr-2">
                                 {group.users.length} مستخدم
                               </span>
                             </div>

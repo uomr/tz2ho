@@ -149,20 +149,20 @@ export function Layout({ children }: { children: React.ReactNode }) {
       <Link href={href}>
         <span
           title={isCollapsed ? label : undefined}
-          className="relative flex items-center gap-3 px-2.5 py-[9px] rounded-lg cursor-pointer select-none transition-colors duration-100"
+          className="relative flex items-center gap-3 px-3 py-2.5 rounded-xl cursor-pointer select-none transition-colors duration-150"
           style={{
             background: active ? colors.dim : "transparent",
-            color: active ? colors.accent : "hsl(var(--sidebar-foreground)/0.45)",
+            color: active ? colors.accent : "hsl(var(--sidebar-foreground)/0.50)",
           }}
         >
           {active && (
             <span
-              className="absolute top-1/2 -translate-y-1/2 w-[3px] h-4 rounded-full"
+              className="absolute top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-full"
               style={{ insetInlineEnd: 0, background: colors.accent }}
             />
           )}
-          <Icon className="w-[17px] h-[17px] shrink-0" />
-          <span className="text-[13px] font-medium tracking-tight" style={fade(!isCollapsed)}>{label}</span>
+          <Icon className="w-5 h-5 shrink-0" />
+          <span className="text-sm font-medium" style={fade(!isCollapsed)}>{label}</span>
         </span>
       </Link>
     );
@@ -175,7 +175,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
         style={{ opacity: isCollapsed ? 0 : 1, transition: "opacity 150ms ease", pointerEvents: isCollapsed ? "none" : "auto" }}
       >
         <div className="flex-1 h-px" style={{ background: "hsl(var(--sidebar-border))" }} />
-        <span className="text-[9px] font-bold tracking-[0.12em] uppercase" style={{ color: color ?? colors.accent + "70" }}>
+        <span className="text-[11px] font-semibold tracking-wider uppercase" style={{ color: color ?? colors.accent + "80" }}>
           {text}
         </span>
         <div className="flex-1 h-px" style={{ background: "hsl(var(--sidebar-border))" }} />
@@ -206,8 +206,8 @@ export function Layout({ children }: { children: React.ReactNode }) {
             <ScanLine className="w-4 h-4 text-white" />
           </div>
           <div style={fade(!isCollapsed)}>
-            <p className="font-bold text-[13px] text-sidebar-foreground leading-none">RuknAuto</p>
-            <p className="text-[10px] mt-0.5 font-medium" style={{ color: colors.accent }}>
+            <p className="font-bold text-sm text-sidebar-foreground leading-none">RuknAuto</p>
+            <p className="text-[11px] mt-0.5 font-medium" style={{ color: colors.accent }}>
               {user?.orgName ?? colors.label}
             </p>
           </div>
@@ -216,7 +216,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <div className="h-px mx-3 shrink-0" style={{ background: "hsl(var(--sidebar-border))" }} />
 
         {/* التنقل */}
-        <nav className="flex-1 px-2 py-2 space-y-0.5 overflow-y-auto overflow-x-hidden">
+        <nav className="flex-1 px-2 py-3 space-y-0.5 overflow-y-auto overflow-x-hidden">
           {navItems.map(item => <NavItem key={item.href} {...item} />)}
 
           {adminItems.length > 0 && (
@@ -240,15 +240,15 @@ export function Layout({ children }: { children: React.ReactNode }) {
           <button
             onClick={toggleTheme}
             title={theme === "dark" ? "وضع صباحي" : "وضع ليلي"}
-            className="w-full flex items-center gap-3 px-2.5 py-[9px] rounded-lg transition-colors duration-100"
-            style={{ color: "hsl(var(--sidebar-foreground)/0.35)" }}
-            onMouseEnter={e => (e.currentTarget.style.color = "hsl(var(--sidebar-foreground)/0.7)")}
-            onMouseLeave={e => (e.currentTarget.style.color = "hsl(var(--sidebar-foreground)/0.35)")}
+            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-colors duration-150"
+            style={{ color: "hsl(var(--sidebar-foreground)/0.40)" }}
+            onMouseEnter={e => (e.currentTarget.style.color = "hsl(var(--sidebar-foreground)/0.75)")}
+            onMouseLeave={e => (e.currentTarget.style.color = "hsl(var(--sidebar-foreground)/0.40)")}
           >
             {theme === "dark"
-              ? <Sun className="w-[17px] h-[17px] shrink-0 text-amber-400/60" />
-              : <Moon className="w-[17px] h-[17px] shrink-0 text-blue-400/60" />}
-            <span className="text-[13px]" style={fade(!isCollapsed)}>
+              ? <Sun className="w-5 h-5 shrink-0 text-amber-400/60" />
+              : <Moon className="w-5 h-5 shrink-0 text-blue-400/60" />}
+            <span className="text-sm" style={fade(!isCollapsed)}>
               {theme === "dark" ? "وضع صباحي" : "وضع ليلي"}
             </span>
           </button>
@@ -256,15 +256,15 @@ export function Layout({ children }: { children: React.ReactNode }) {
           <button
             onClick={() => setIsCollapsed(c => !c)}
             title={isCollapsed ? "توسيع" : "طي"}
-            className="w-full flex items-center gap-3 px-2.5 py-[9px] rounded-lg transition-colors duration-100"
-            style={{ color: "hsl(var(--sidebar-foreground)/0.25)" }}
+            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-colors duration-150"
+            style={{ color: "hsl(var(--sidebar-foreground)/0.28)" }}
             onMouseEnter={e => (e.currentTarget.style.color = "hsl(var(--sidebar-foreground)/0.55)")}
-            onMouseLeave={e => (e.currentTarget.style.color = "hsl(var(--sidebar-foreground)/0.25)")}
+            onMouseLeave={e => (e.currentTarget.style.color = "hsl(var(--sidebar-foreground)/0.28)")}
           >
             {isCollapsed
-              ? <ChevronsLeft className="w-[17px] h-[17px] shrink-0" />
-              : <ChevronsRight className="w-[17px] h-[17px] shrink-0" />}
-            <span className="text-[13px]" style={fade(!isCollapsed)}>طي القائمة</span>
+              ? <ChevronsLeft className="w-5 h-5 shrink-0" />
+              : <ChevronsRight className="w-5 h-5 shrink-0" />}
+            <span className="text-sm" style={fade(!isCollapsed)}>طي القائمة</span>
           </button>
         </div>
 
@@ -291,10 +291,10 @@ export function Layout({ children }: { children: React.ReactNode }) {
                   {initials}
                 </div>
                 <div className="flex-1 min-w-0 text-right" style={fade(!isCollapsed)}>
-                  <p className="text-[12px] font-semibold text-sidebar-foreground leading-none truncate">
+                  <p className="text-[13px] font-semibold text-sidebar-foreground leading-none truncate">
                     {user?.displayName ?? "مستخدم"}
                   </p>
-                  <p className="text-[10px] mt-0.5 truncate font-medium" style={{ color: colors.accent }}>
+                  <p className="text-[12px] mt-0.5 truncate font-medium" style={{ color: colors.accent }}>
                     {colors.label}
                   </p>
                 </div>
@@ -310,7 +310,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
             >
               <DropdownMenuLabel className="px-3 py-2.5">
                 <p className="text-xs font-bold text-foreground truncate">{user?.displayName ?? "مستخدم"}</p>
-                <p className="text-[10px] text-muted-foreground mt-0.5 font-mono">{user?.username}</p>
+                <p className="text-xs text-muted-foreground mt-0.5 font-mono">{user?.username}</p>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuItem className="gap-2.5 cursor-pointer px-3 py-2 rounded-lg mx-1" onClick={() => setShowPassModal(true)}>
@@ -337,14 +337,14 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <header
           className="flex items-center px-6 shrink-0 gap-4"
           style={{
-            height: "52px",
+            height: "58px",
             borderBottom: "1px solid hsl(var(--border))",
-            background: "hsl(var(--card)/0.6)",
-            backdropFilter: "blur(8px)",
+            background: "hsl(var(--card)/0.65)",
+            backdropFilter: "blur(10px)",
           }}
         >
           {/* عنوان الصفحة */}
-          <h1 className="text-[15px] font-bold text-foreground tracking-tight">
+          <h1 className="text-base font-bold text-foreground tracking-tight">
             {pageTitle}
           </h1>
 
@@ -352,14 +352,14 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
           {/* المؤسسة */}
           {user?.orgName && (
-            <span className="hidden sm:flex items-center gap-1.5 text-[11px] text-muted-foreground/70 font-medium">
+            <span className="hidden sm:flex items-center gap-1.5 text-xs text-muted-foreground/70 font-medium">
               {isAdmin && <ShieldCheck className="w-3 h-3 shrink-0" style={{ color: colors.accent }} />}
               {user.orgName}
             </span>
           )}
 
           {/* مؤشر ERP */}
-          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-medium bg-emerald-500/8 border border-emerald-500/15 text-emerald-500 dark:text-emerald-400/80">
+          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-500/8 border border-emerald-500/15 text-emerald-500 dark:text-emerald-400/80">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />
             <span className="hidden md:block">ERP</span>
           </div>
@@ -371,7 +371,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
             <LayoutDashboard className="w-4 h-4 shrink-0" />
             <div className="flex-1 min-w-0">
               <p className="text-xs font-bold">وضع إدارة مؤسسة</p>
-              <p className="text-[10px] opacity-80 mt-0.5">أنت الآن تقوم بإدارة هذه المؤسسة (معرّف: {activeOrgId})</p>
+              <p className="text-xs opacity-80 mt-0.5">أنت الآن تقوم بإدارة هذه المؤسسة (معرّف: {activeOrgId})</p>
             </div>
             <button
               onClick={() => {
@@ -416,7 +416,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
               </div>
             </div>
             {location !== "/extract" && (
-              <span className="text-[10px] text-purple-400/70 font-medium whitespace-nowrap">
+              <span className="text-xs text-purple-400/70 font-medium whitespace-nowrap">
                 اضغط للعودة
               </span>
             )}
@@ -475,7 +475,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
         {/* المحتوى */}
         <div className="flex-1 overflow-auto">
-          <div className="p-6 max-w-7xl mx-auto">{children}</div>
+          <div className="p-7 max-w-7xl mx-auto">{children}</div>
         </div>
       </main>
 

@@ -151,9 +151,9 @@ export default function Extract() {
         </p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
         {/* ── Left: Image Upload Panel ────────────────────────────── */}
-        <div className="lg:col-span-1 space-y-4">
+        <div className="lg:col-span-2 space-y-4">
           <Card className="bg-card">
             <CardContent className="p-4 space-y-4">
 
@@ -179,7 +179,7 @@ export default function Extract() {
                 </div>
               ) : (
                 <div
-                  className="border-2 border-dashed border-border rounded-lg p-10 text-center hover:bg-muted/50 transition-colors cursor-pointer"
+                  className="border-2 border-dashed border-border rounded-xl p-12 text-center hover:bg-muted/50 transition-colors cursor-pointer"
                   onDragOver={(e) => e.preventDefault()}
                   onDrop={(e) => {
                     e.preventDefault();
@@ -188,9 +188,9 @@ export default function Extract() {
                   }}
                   onClick={() => fileInputRef.current?.click()}
                 >
-                  <UploadCloud className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
-                  <p className="text-sm font-medium mb-1">الصفحة الأولى</p>
-                  <p className="text-xs text-muted-foreground">اسحب أو انقر للاختيار</p>
+                  <UploadCloud className="w-12 h-12 text-muted-foreground/50 mx-auto mb-4" />
+                  <p className="text-base font-semibold mb-1.5">الصفحة الأولى</p>
+                  <p className="text-sm text-muted-foreground">اسحب وأفلت أو انقر للاختيار</p>
                   <input
                     type="file"
                     className="hidden"
@@ -242,7 +242,7 @@ export default function Extract() {
                       <p className="text-xs text-purple-400/80 font-medium">
                         إضافة صفحة ثانية (اختياري)
                       </p>
-                      <p className="text-[10px] text-muted-foreground mt-1">
+                      <p className="text-xs text-muted-foreground mt-1">
                         إذا كانت الفاتورة في صفحتين
                       </p>
                       <input
@@ -309,7 +309,7 @@ export default function Extract() {
         </div>
 
         {/* ── Right: Extracted Data ────────────────────────────────── */}
-        <div className="lg:col-span-2">
+        <div className="lg:col-span-3">
           <Card className="bg-card min-h-[500px]">
             <CardContent className="p-6">
               {isExtracting ? (
@@ -409,7 +409,7 @@ export default function Extract() {
                                 {item.memoryMatch && (
                                   <div className="flex items-center gap-1 text-violet-600 dark:text-violet-400 px-1">
                                     <CheckCircle2 className="w-3 h-3 shrink-0" />
-                                    <span className="text-[9px] font-semibold">
+                                    <span className="text-[11px] font-semibold">
                                       {item.memoryConfidence}% مطابقة من الذاكرة
                                     </span>
                                   </div>
@@ -442,7 +442,7 @@ export default function Extract() {
                                   min={1}
                                 />
                                 {item.packFactor > 1 && (
-                                  <span className="text-[9px] text-violet-600 dark:text-violet-300 font-bold text-center block leading-none">
+                                  <span className="text-[11px] text-violet-600 dark:text-violet-300 font-bold text-center block leading-none">
                                     ⚡ {item.quantity * item.packFactor} حبة
                                   </span>
                                 )}

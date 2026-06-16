@@ -22,7 +22,7 @@ export default function Dashboard() {
       {/* ── ترحيب ── */}
       <div className="flex items-start justify-between">
         <div>
-          <h2 className="text-[22px] font-bold tracking-tight">
+          <h2 className="text-2xl font-bold tracking-tight">
             {greeting}، {displayName} 👋
           </h2>
           <p className="text-muted-foreground text-sm mt-1">
@@ -80,7 +80,7 @@ export default function Dashboard() {
       <div className="grid gap-4 lg:grid-cols-3">
         {/* ── إجراءات سريعة ── */}
         <div className="space-y-2.5">
-          <p className="text-[11px] font-semibold text-muted-foreground/70 uppercase tracking-widest px-0.5">
+          <p className="text-xs font-semibold text-muted-foreground/70 uppercase tracking-widest px-0.5">
             الإجراءات السريعة
           </p>
           <QuickAction
@@ -156,7 +156,7 @@ export default function Dashboard() {
                   <div className="w-1.5 h-1.5 rounded-full mt-1.5 shrink-0" style={{ background: colors.accent }} />
                   <div className="flex-1 min-w-0">
                     <p className="text-sm leading-snug">{activity.description}</p>
-                    <p className="text-[11px] text-muted-foreground mt-0.5">
+                    <p className="text-xs text-muted-foreground mt-0.5">
                       {new Date(activity.createdAt).toLocaleString("ar-SA", { dateStyle: "short", timeStyle: "short" })}
                     </p>
                   </div>
@@ -223,7 +223,7 @@ function StatCard({
           <Icon className="w-5 h-5" style={{ color }} />
         </div>
         {isPercent && !isLoading && value != null && (
-          <span className="flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">
+          <span className="flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">
             <TrendingUp className="w-2.5 h-2.5" />
             جيد
           </span>
@@ -231,11 +231,11 @@ function StatCard({
       </div>
       <div>
         {isLoading
-          ? <Skeleton className="h-7 w-16 mt-1" />
-          : <p className="text-2xl font-bold tabular-nums">{value ?? 0}</p>
+          ? <Skeleton className="h-8 w-16 mt-1" />
+          : <p className="text-[28px] font-bold tabular-nums leading-none">{value ?? 0}</p>
         }
-        <p className="text-[11px] text-muted-foreground mt-0.5">{title}</p>
-        <p className="text-[10px] text-muted-foreground/50 mt-1">{sub}</p>
+        <p className="text-xs text-muted-foreground mt-1.5">{title}</p>
+        <p className="text-[11px] text-muted-foreground/50 mt-0.5">{sub}</p>
       </div>
     </div>
   );
@@ -257,8 +257,8 @@ function QuickAction({ href, icon: Icon, label, desc, color, primary }: {
           <Icon className="w-4 h-4" style={{ color }} />
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-[13px] font-semibold leading-none">{label}</p>
-          <p className="text-[11px] text-muted-foreground mt-1">{desc}</p>
+          <p className="text-sm font-semibold leading-none">{label}</p>
+          <p className="text-xs text-muted-foreground mt-1">{desc}</p>
         </div>
         <ChevronLeft className="w-4 h-4 text-muted-foreground/30 shrink-0" />
       </div>
@@ -275,7 +275,7 @@ function ActivityBadge({ type }: { type: string }) {
   const b = map[type] ?? { label: type, color: "#6b7280" };
   return (
     <span
-      className="text-[10px] font-semibold px-2 py-0.5 rounded-full shrink-0"
+      className="text-[11px] font-semibold px-2 py-0.5 rounded-full shrink-0"
       style={{ background: b.color + "18", color: b.color }}
     >
       {b.label}

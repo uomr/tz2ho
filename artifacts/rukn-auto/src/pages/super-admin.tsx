@@ -251,7 +251,7 @@ export default function SuperAdmin() {
           <CardTitle className="text-sm font-semibold flex items-center gap-2">
             <Building2 className="w-4 h-4 text-primary" />
             الشركات المسجّلة
-            <span className="mr-auto text-[10px] font-medium bg-muted px-2 py-0.5 rounded-full text-muted-foreground">
+            <span className="mr-auto text-[11px] font-medium bg-muted px-2 py-0.5 rounded-full text-muted-foreground">
               {orgs.length} شركة
             </span>
           </CardTitle>
@@ -279,10 +279,10 @@ export default function SuperAdmin() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
                         <p className="font-semibold text-foreground text-sm">{org.name}</p>
-                        <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full border ${PLAN_COLORS[org.plan] ?? PLAN_COLORS.free}`}>
+                        <span className={`text-[11px] font-semibold px-1.5 py-0.5 rounded-full border ${PLAN_COLORS[org.plan] ?? PLAN_COLORS.free}`}>
                           {PLAN_LABELS[org.plan] ?? org.plan}
                         </span>
-                        <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full border ${STATUS_COLORS[org.status] ?? ""}`}>
+                        <span className={`text-[11px] font-semibold px-1.5 py-0.5 rounded-full border ${STATUS_COLORS[org.status] ?? ""}`}>
                           {STATUS_LABELS[org.status] ?? org.status}
                         </span>
                       </div>
@@ -304,7 +304,7 @@ export default function SuperAdmin() {
 
                     {/* الاستخدام */}
                     <div className="hidden md:block w-28 shrink-0">
-                      <div className="flex justify-between text-[10px] text-muted-foreground mb-1">
+                      <div className="flex justify-between text-[11px] text-muted-foreground mb-1">
                         <span>{org.invoices_this_month}/{org.max_invoices_per_month}</span>
                         <span>{Number(org.plan_usage_pct ?? 0).toFixed(0)}%</span>
                       </div>
@@ -325,7 +325,7 @@ export default function SuperAdmin() {
                           { label: "الحد الشهري", val: `${org.max_invoices_per_month} فاتورة` },
                         ].map(({ label, val }) => (
                           <div key={label} className="bg-muted/20 rounded-lg p-2.5">
-                            <p className="text-[10px] text-muted-foreground">{label}</p>
+                            <p className="text-[11px] text-muted-foreground">{label}</p>
                             <p className="text-xs font-semibold text-foreground mt-0.5 truncate">{val}</p>
                           </div>
                         ))}
@@ -366,7 +366,7 @@ export default function SuperAdmin() {
                             key={plan}
                             disabled={org.plan === plan || actionLoading === org.id}
                             onClick={() => updateOrg(org.id, { plan })}
-                            className={`text-[10px] font-semibold px-2.5 py-1 rounded-lg border transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
+                            className={`text-[11px] font-semibold px-2.5 py-1 rounded-lg border transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
                               org.plan === plan
                                 ? PLAN_COLORS[plan]
                                 : "border-border text-muted-foreground hover:border-primary/40 hover:text-primary"
@@ -383,7 +383,7 @@ export default function SuperAdmin() {
                           <button
                             disabled={actionLoading === org.id}
                             onClick={() => updateOrg(org.id, { status: "suspended" })}
-                            className="flex items-center gap-1 text-[10px] font-semibold px-2.5 py-1 rounded-lg border border-red-500/30 text-red-400 hover:bg-red-500/10 transition-colors disabled:opacity-40"
+                            className="flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1 rounded-lg border border-red-500/30 text-red-400 hover:bg-red-500/10 transition-colors disabled:opacity-40"
                           >
                             <AlertTriangle className="w-3 h-3" />
                             تعليق الحساب
@@ -392,7 +392,7 @@ export default function SuperAdmin() {
                           <button
                             disabled={actionLoading === org.id}
                             onClick={() => updateOrg(org.id, { status: "active" })}
-                            className="flex items-center gap-1 text-[10px] font-semibold px-2.5 py-1 rounded-lg border border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10 transition-colors disabled:opacity-40"
+                            className="flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1 rounded-lg border border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10 transition-colors disabled:opacity-40"
                           >
                             <CheckCircle2 className="w-3 h-3" />
                             إعادة التفعيل
@@ -438,7 +438,7 @@ export default function SuperAdmin() {
                 className="text-left"
                 dir="ltr"
               />
-              <p className="text-[10px] text-muted-foreground">يُستخدم في الروابط ومعرفات النظام الداخلية ولا يمكن تغييره لاحقاً.</p>
+              <p className="text-[11px] text-muted-foreground">يُستخدم في الروابط ومعرفات النظام الداخلية ولا يمكن تغييره لاحقاً.</p>
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium">البريد الإلكتروني (اختياري)</label>
@@ -492,7 +492,7 @@ export default function SuperAdmin() {
                 className="text-left"
                 dir="ltr"
               />
-              <p className="text-[10px] text-muted-foreground">تغيير المعرّف قد يؤثر على روابط تسجيل الدخول للمستخدمين!</p>
+              <p className="text-[11px] text-muted-foreground">تغيير المعرّف قد يؤثر على روابط تسجيل الدخول للمستخدمين!</p>
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium">البريد الإلكتروني (اختياري)</label>

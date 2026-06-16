@@ -717,7 +717,7 @@ export default function Invoices() {
           <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="بحث برقم الفاتورة أو المورد..."
-            className="pr-10 h-9"
+            className="pr-10 h-10"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
@@ -730,7 +730,7 @@ export default function Invoices() {
         <Button
           variant="outline"
           size="sm"
-          className="h-9 gap-1.5 text-xs shrink-0 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10"
+          className="h-10 gap-1.5 text-xs shrink-0 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10"
           onClick={exportAllExcel}
         >
           <FileSpreadsheet className="h-3.5 w-3.5" />
@@ -774,15 +774,15 @@ export default function Invoices() {
                   </tr>
                 ) : filteredInvoices?.map((inv) => (
                   <tr key={inv.id} className="hover:bg-muted/50 transition-colors">
-                    <td className="p-3 font-medium font-mono text-sm">{inv.invoiceNumber || '—'}</td>
-                    <td className="p-3">{inv.supplier || '—'}</td>
-                    <td className="p-3 text-muted-foreground text-xs">{inv.date || '—'}</td>
-                    <td className="p-3 text-center tabular-nums">{inv.itemCount || 0}</td>
-                    <td className="p-3 tabular-nums">{inv.totalAmount ? `${inv.totalAmount.toLocaleString('ar-SA', { minimumFractionDigits: 0, maximumFractionDigits: 1 })} ر.س` : '—'}</td>
-                    <td className="p-3">
+                    <td className="px-4 py-3.5 font-medium font-mono text-sm">{inv.invoiceNumber || '—'}</td>
+                    <td className="px-4 py-3.5">{inv.supplier || '—'}</td>
+                    <td className="px-4 py-3.5 text-muted-foreground text-xs">{inv.date || '—'}</td>
+                    <td className="px-4 py-3.5 text-center tabular-nums">{inv.itemCount || 0}</td>
+                    <td className="px-4 py-3.5 tabular-nums">{inv.totalAmount ? `${inv.totalAmount.toLocaleString('ar-SA', { minimumFractionDigits: 0, maximumFractionDigits: 1 })} ر.س` : '—'}</td>
+                    <td className="px-4 py-3.5">
                       <StatusBadge status={inv.status} />
                     </td>
-                    <td className="p-3">
+                    <td className="px-4 py-3.5">
                       <div className="flex items-center justify-center gap-0.5">
                         <Button 
                           variant="ghost" 
@@ -1029,20 +1029,20 @@ export default function Invoices() {
                       <Terminal className="w-3.5 h-3.5" />
                       <span>وحدة تحكم RPA</span>
                       {speedMode === "fast" && (
-                        <span className="px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-400 border border-amber-500/25 text-[10px] font-semibold">سريع</span>
+                        <span className="px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-400 border border-amber-500/25 text-[11px] font-semibold">سريع</span>
                       )}
                     </div>
                     <div className="flex items-center gap-2">
                       {speedWarnings > 0 && (
-                        <span className="px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-400 border border-amber-500/25 text-[10px] font-semibold">{speedWarnings} تحذير</span>
+                        <span className="px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-400 border border-amber-500/25 text-[11px] font-semibold">{speedWarnings} تحذير</span>
                       )}
-                      {injectStatus === "countdown" && <span className="px-1.5 py-0.5 rounded bg-amber-500/10 border border-amber-500/20 text-amber-400 text-[10px] font-semibold animate-pulse">التركيز في {countdown}s</span>}
-                      {injectStatus === "running" && <span className="px-1.5 py-0.5 rounded bg-blue-500/10 border border-blue-500/20 text-blue-400 text-[10px] font-semibold animate-pulse">جاري...</span>}
-                      {injectStatus === "waiting_input" && <span className="px-1.5 py-0.5 rounded bg-amber-500/10 border border-amber-500/20 text-amber-300 text-[10px] font-semibold animate-pulse">انتظار المدخل</span>}
-                      {injectStatus === "success" && <span className="px-1.5 py-0.5 rounded bg-green-500/10 border border-green-500/20 text-green-400 text-[10px] font-semibold">اكتمل</span>}
+                      {injectStatus === "countdown" && <span className="px-1.5 py-0.5 rounded bg-amber-500/10 border border-amber-500/20 text-amber-400 text-[11px] font-semibold animate-pulse">التركيز في {countdown}s</span>}
+                      {injectStatus === "running" && <span className="px-1.5 py-0.5 rounded bg-blue-500/10 border border-blue-500/20 text-blue-400 text-[11px] font-semibold animate-pulse">جاري...</span>}
+                      {injectStatus === "waiting_input" && <span className="px-1.5 py-0.5 rounded bg-amber-500/10 border border-amber-500/20 text-amber-300 text-[11px] font-semibold animate-pulse">انتظار المدخل</span>}
+                      {injectStatus === "success" && <span className="px-1.5 py-0.5 rounded bg-green-500/10 border border-green-500/20 text-green-400 text-[11px] font-semibold">اكتمل</span>}
                       {isInjecting && (
                         <Button variant="destructive" size="sm"
-                          className="h-6 px-2.5 text-[10px] font-semibold bg-red-900/50 border border-red-700/60 text-red-300 hover:bg-red-800/60"
+                          className="h-6 px-2.5 text-[11px] font-semibold bg-red-900/50 border border-red-700/60 text-red-300 hover:bg-red-800/60"
                           onClick={handleAbort}>
                           ايقاف
                         </Button>
@@ -1062,7 +1062,7 @@ export default function Invoices() {
                     <div ref={logEndRef} />
                   </div>
                   {isInjecting && (
-                    <div className="px-3 py-1.5 border-t border-border/40 text-[10px] text-muted-foreground/60" dir="rtl">
+                    <div className="px-3 py-1.5 border-t border-border/40 text-[11px] text-muted-foreground/60" dir="rtl">
                       لإيقاف فوري: حرّك الماوس إلى الزاوية العليا اليسرى من الشاشة.
                     </div>
                   )}
@@ -1206,7 +1206,7 @@ export default function Invoices() {
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-bold text-foreground">رقم القطعة غير موجود في ERP</p>
-              <p className="text-[11px] text-amber-600/70 dark:text-amber-400/70 mt-0.5 font-medium">
+              <p className="text-xs text-amber-600/70 dark:text-amber-400/70 mt-0.5 font-medium">
                 الصف {(inputRequired?.row ?? 0) + 1} — الروبوت متوقف وينتظر قرارك
               </p>
             </div>
@@ -1218,13 +1218,13 @@ export default function Invoices() {
             {/* ── معلومات القطعة ── */}
             <div className="rounded-xl border border-border bg-muted/30 overflow-hidden">
               <div className="flex items-start gap-3 px-4 py-3 border-b border-border/50">
-                <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider pt-0.5 shrink-0 w-20 text-left">الوصف</span>
+                <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider pt-0.5 shrink-0 w-20 text-left">الوصف</span>
                 <span className="text-sm font-medium text-foreground leading-snug text-right flex-1">
                   {inputRequired?.description || "—"}
                 </span>
               </div>
               <div className="flex items-center gap-3 px-4 py-3">
-                <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider shrink-0 w-20 text-left">الرقم المرفوض</span>
+                <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider shrink-0 w-20 text-left">الرقم المرفوض</span>
                 <div className="flex-1 flex justify-end">
                   <span
                     className="inline-flex items-center font-mono font-bold text-red-500 dark:text-red-400 bg-red-500/8 border border-red-500/20 px-3 py-1 rounded-lg text-sm tracking-widest"
@@ -1337,30 +1337,30 @@ export default function Invoices() {
             <>
               {/* حقول رأس الفاتورة — ثابتة */}
               <div className="shrink-0 grid grid-cols-3 gap-3 py-3 border-b border-border/50">
-                <div className="space-y-1">
-                  <label className="text-[11px] font-semibold text-muted-foreground">رقم الفاتورة</label>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-muted-foreground">رقم الفاتورة</label>
                   <Input
                     value={editInvoice.invoiceNumber || ""}
                     onChange={(e) => setEditInvoice({ ...editInvoice, invoiceNumber: e.target.value })}
-                    className="h-8 text-sm"
+                    className="h-9 text-sm"
                     placeholder="رقم الفاتورة"
                   />
                 </div>
-                <div className="space-y-1">
-                  <label className="text-[11px] font-semibold text-muted-foreground">المورد</label>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-muted-foreground">المورد</label>
                   <Input
                     value={editInvoice.supplier || ""}
                     onChange={(e) => setEditInvoice({ ...editInvoice, supplier: e.target.value })}
-                    className="h-8 text-sm"
+                    className="h-9 text-sm"
                     placeholder="اسم المورد"
                   />
                 </div>
-                <div className="space-y-1">
-                  <label className="text-[11px] font-semibold text-muted-foreground">التاريخ</label>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-muted-foreground">التاريخ</label>
                   <Input
                     value={editInvoice.date || ""}
                     onChange={(e) => setEditInvoice({ ...editInvoice, date: e.target.value })}
-                    className="h-8 text-sm"
+                    className="h-9 text-sm"
                     placeholder="YYYY-MM-DD"
                     dir="ltr"
                   />
