@@ -296,45 +296,50 @@ router.post("/invoices/:id/save", requireAuth, async (req, res): Promise<void> =
     }
   }
 
-  // Update invoice
-  const [invoice] = await db
-    .update(invoicesTable)
-    .set({
-      invoiceNumber: invoiceNumber || null,
-      supplier: supplier || null,
-      date: date || null,
-      status: "saved",
-      totalAmount: items.reduce((s: any, i: any) => s + (i.total ?? 0), 0),
-      itemCount: items.length,
-    })
-    .where(eq(invoicesTable.id, params.data.id))
-    .returning();
+  // Update invoice + replace items — في عملية ذرّية واحدة
+  const invoice = await db.transaction(async (tx) => {
+    const [inv] = await tx
+      .update(invoicesTable)
+      .set({
+        invoiceNumber: invoiceNumber || null,
+        supplier: supplier || null,
+        date: date || null,
+        status: "saved",
+        totalAmount: items.reduce((s: any, i: any) => s + (i.total ?? 0), 0),
+        itemCount: items.length,
+      })
+      .where(eq(invoicesTable.id, params.data.id))
+      .returning();
+
+    if (!inv) return null;
+
+    await tx.delete(invoiceItemsTable).where(eq(invoiceItemsTable.invoiceId, inv.id));
+
+    if (items.length > 0) {
+      await tx.insert(invoiceItemsTable).values(
+        items.map((item: any) => ({
+          invoiceId: inv.id,
+          partNumber: item.partNumber ?? null,
+          originalPartNumber: item.originalPartNumber ?? null,
+          description: item.description,
+          quantity: item.quantity,
+          unit: item.unit ?? null,
+          unitCost: item.unitCost,
+          total: item.total ?? item.quantity * item.unitCost,
+          packFactor: item.packFactor ?? 1,
+          memoryMatch: item.memoryMatch ?? false,
+          memoryConfidence: item.memoryConfidence ?? null,
+          needsManualInput: item.needsManualInput ?? false,
+        }))
+      );
+    }
+
+    return inv;
+  });
 
   if (!invoice) {
     res.status(404).json({ error: "الفاتورة غير موجودة" });
     return;
-  }
-
-  // Replace items
-  await db.delete(invoiceItemsTable).where(eq(invoiceItemsTable.invoiceId, invoice.id));
-
-  if (items.length > 0) {
-    await db.insert(invoiceItemsTable).values(
-      items.map((item: any) => ({
-        invoiceId: invoice.id,
-        partNumber: item.partNumber ?? null,
-        originalPartNumber: item.originalPartNumber ?? null,
-        description: item.description,
-        quantity: item.quantity,
-        unit: item.unit ?? null,
-        unitCost: item.unitCost,
-        total: item.total ?? item.quantity * item.unitCost,
-        packFactor: item.packFactor ?? 1,
-        memoryMatch: item.memoryMatch ?? false,
-        memoryConfidence: item.memoryConfidence ?? null,
-        needsManualInput: item.needsManualInput ?? false,
-      }))
-    );
   }
 
   // Learn from confirmed data

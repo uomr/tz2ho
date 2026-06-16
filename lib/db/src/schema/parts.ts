@@ -27,7 +27,11 @@ export const partsTable = pgTable("parts", {
   embedding: vector("embedding", { dimensions: 768 } as any),
   orgId: integer("org_id"),           // FK to organizations.id
   createdAt: timestamp("created_at").defaultNow().notNull(),
-});
+}, (t) => [
+  index("parts_org_id_idx").on(t.orgId),
+  index("parts_part_number_idx").on(t.partNumber),
+  index("parts_usage_count_idx").on(t.usageCount),
+]);
 
 export const insertPartSchema = createInsertSchema(partsTable).omit({ id: true, createdAt: true, embedding: true });
 

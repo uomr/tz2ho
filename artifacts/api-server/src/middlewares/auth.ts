@@ -4,7 +4,10 @@
 import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 
-const JWT_SECRET = process.env.SESSION_SECRET || "ruknauto-secret-change-me";
+const JWT_SECRET = process.env.SESSION_SECRET;
+if (!JWT_SECRET) {
+  throw new Error("SESSION_SECRET غير مُعيَّن في متغيرات البيئة — لا يمكن تشغيل السيرفر بدونه");
+}
 
 export interface AuthPayload {
   userId: number;

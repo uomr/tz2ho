@@ -63,34 +63,38 @@ router.post("/auth/register", async (req, res): Promise<void> => {
     return;
   }
 
-  // ── إنشاء المنظمة ──
-  const [org] = await db
-    .insert(organizationsTable)
-    .values({
-      name:                orgName,
-      slug:                orgSlug,
-      plan:                "trial",
-      status:              "trial",
-      maxInvoicesPerMonth: 50,
-      contactEmail:        contactEmail || null,
-    })
-    .returning();
-
-  // ── إنشاء المدير الأول ──
+  // ── إنشاء المنظمة والمدير في عملية ذرّية واحدة ──
   const passwordHash = await bcrypt.hash(password, 10);
-  const [user] = await db
-    .insert(usersTable)
-    .values({
-      username:     username.toLowerCase(),
-      passwordHash,
-      displayName,
-      role:         "admin",
-      department:   "admin",
-      isActive:     true,
-      canEditParts: true,
-      orgId:        org.id,
-    })
-    .returning();
+
+  const { org, user } = await db.transaction(async (tx) => {
+    const [org] = await tx
+      .insert(organizationsTable)
+      .values({
+        name:                orgName,
+        slug:                orgSlug,
+        plan:                "trial",
+        status:              "trial",
+        maxInvoicesPerMonth: 50,
+        contactEmail:        contactEmail || null,
+      })
+      .returning();
+
+    const [user] = await tx
+      .insert(usersTable)
+      .values({
+        username:     username.toLowerCase(),
+        passwordHash,
+        displayName,
+        role:         "admin",
+        department:   "admin",
+        isActive:     true,
+        canEditParts: true,
+        orgId:        org.id,
+      })
+      .returning();
+
+    return { org, user };
+  });
 
   // ── إصدار JWT مباشرة (دخول تلقائي بعد التسجيل) ──
   const token = signToken({
