@@ -283,7 +283,8 @@ router.post("/invoices/:id/save", requireAuth, async (req, res): Promise<void> =
       .where(
         sql`${invoicesTable.invoiceNumber} = ${invoiceNumber.trim()}
             AND ${invoicesTable.id} != ${params.data.id}
-            AND ${invoicesTable.status} != 'pending'`
+            AND ${invoicesTable.status} != 'pending'
+            AND ${invoicesTable.orgId} = ${req.user?.orgId ?? null}`
       )
       .limit(1);
 
