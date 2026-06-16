@@ -5,7 +5,7 @@ import { Router, type IRouter } from "express";
 import { db } from "@workspace/db";
 import { systemSettingsTable, AVAILABLE_MODELS, DEFAULT_MODEL_ID } from "@workspace/db";
 import { eq } from "drizzle-orm";
-import { requireAdmin } from "../middlewares/auth.js";
+import { requireSuperAdmin } from "../middlewares/auth.js";
 import { logger } from "../lib/logger.js";
 import { rebuildMissingEmbeddings } from "../lib/parts-memory.js";
 
@@ -33,7 +33,7 @@ async function setSetting(key: string, value: string): Promise<void> {
 }
 
 // ── GET /api/admin/settings ─────────────────────────────────
-router.get("/admin/settings", requireAdmin, async (_req, res): Promise<void> => {
+router.get("/admin/settings", requireSuperAdmin, async (_req, res): Promise<void> => {
   const [modelRow, tokensIn, tokensOut, extractions, usageMonth, costLimit] =
     await Promise.all([
       getSetting("active_model"),
@@ -83,7 +83,7 @@ router.get("/admin/settings", requireAdmin, async (_req, res): Promise<void> => 
 });
 
 // ── PATCH /api/admin/settings ───────────────────────────────
-router.patch("/admin/settings", requireAdmin, async (req, res): Promise<void> => {
+router.patch("/admin/settings", requireSuperAdmin, async (req, res): Promise<void> => {
   const { activeModel, costLimitUsd } = req.body;
 
   if (activeModel) {
@@ -136,7 +136,7 @@ export async function recordUsage(tokensIn: number, tokensOut: number): Promise<
 }
 
 // ── POST /api/admin/rebuild-embeddings ─────────────────────
-router.post("/admin/rebuild-embeddings", requireAdmin, async (_req, res): Promise<void> => {
+router.post("/admin/rebuild-embeddings", requireSuperAdmin, async (_req, res): Promise<void> => {
   logger.info("Admin triggered embedding rebuild");
   try {
     const result = await rebuildMissingEmbeddings();

@@ -16,12 +16,17 @@ router.get("/invoices/:id/export/excel", requireAuth, async (req, res): Promise<
   const id = Number(req.params.id);
   if (!id) { res.status(400).json({ error: "معرّف غير صالح" }); return; }
 
-  const invoice = await db.query.invoicesTable.findFirst({
-    where: eq(invoicesTable.id, id),
-    with: { items: true },
-  });
+  const [invoice] = await db
+    .select()
+    .from(invoicesTable)
+    .where(eq(invoicesTable.id, id));
 
   if (!invoice) { res.status(404).json({ error: "الفاتورة غير موجودة" }); return; }
+
+  const items = await db
+    .select()
+    .from(invoiceItemsTable)
+    .where(eq(invoiceItemsTable.invoiceId, id));
 
   const wb = XLSX.utils.book_new();
 
@@ -39,7 +44,7 @@ router.get("/invoices/:id/export/excel", requireAuth, async (req, res): Promise<
 
   // ── ورقة البنود ──
   const headers = ["#", "رقم القطعة", "الوصف", "الكمية", "الوحدة", "سعر الوحدة", "الإجمالي", "عامل الكرتون"];
-  const rows = (invoice.items ?? []).map((item, i) => [
+  const rows = items.map((item, i) => [
     i + 1,
     item.partNumber  ?? "",
     item.description ?? "",
@@ -72,24 +77,45 @@ router.get("/invoices/:id/export/excel", requireAuth, async (req, res): Promise<
 // ── GET /api/invoices/export/excel/all ──────────────────────
 // تصدير جميع الفواتير المحفوظة في ملف Excel واحد (تقرير شامل)
 router.get("/invoices/export/excel/all", requireAuth, async (_req, res): Promise<void> => {
-  const invoices = await db.query.invoicesTable.findMany({
-    where: eq(invoicesTable.status, "saved"),
-    with: { items: true },
-    orderBy: (t, { desc }) => [desc(t.createdAt)],
-  });
+  // جلب الفواتير المحفوظة فقط (ليس pending)
+  const invoices = await db
+    .select()
+    .from(invoicesTable)
+    .where(eq(invoicesTable.status, "saved"));
+
+  // جلب جميع البنود دفعة واحدة
+  const invoiceIds = invoices.map((inv) => inv.id);
+  let allItems: (typeof invoiceItemsTable.$inferSelect)[] = [];
+  if (invoiceIds.length > 0) {
+    const { inArray } = await import("drizzle-orm");
+    allItems = await db
+      .select()
+      .from(invoiceItemsTable)
+      .where(inArray(invoiceItemsTable.invoiceId, invoiceIds));
+  }
+
+  // تجميع البنود حسب الفاتورة
+  const itemsByInvoiceId = allItems.reduce((acc, item) => {
+    if (!acc[item.invoiceId]) acc[item.invoiceId] = [];
+    acc[item.invoiceId].push(item);
+    return acc;
+  }, {} as Record<number, typeof allItems>);
 
   const wb = XLSX.utils.book_new();
 
   // ── ورقة ملخص الفواتير ──
   const summaryHeaders = ["رقم الفاتورة", "المورد", "التاريخ", "عدد البنود", "الإجمالي (ر.س)", "تاريخ الإضافة"];
-  const summaryRows = invoices.map(inv => [
-    inv.invoiceNumber ?? "—",
-    inv.supplier ?? "—",
-    inv.date ?? "—",
-    inv.items?.length ?? 0,
-    inv.items?.reduce((s, it) => s + (it.quantity ?? 0) * (it.unitCost ?? 0), 0).toFixed(2) ?? 0,
-    inv.createdAt ? new Date(inv.createdAt).toLocaleDateString("ar-SA") : "—",
-  ]);
+  const summaryRows = invoices.map(inv => {
+    const invItems = itemsByInvoiceId[inv.id] || [];
+    return [
+      inv.invoiceNumber ?? "—",
+      inv.supplier ?? "—",
+      inv.date ?? "—",
+      invItems.length,
+      invItems.reduce((s, it) => s + (it.quantity ?? 0) * (it.unitCost ?? 0), 0).toFixed(2),
+      inv.createdAt ? new Date(inv.createdAt).toLocaleDateString("ar-SA") : "—",
+    ];
+  });
   const grandTotal = summaryRows.reduce((s, r) => s + Number(r[4]), 0);
   summaryRows.push(["", "الإجمالي الكلي", "", "", grandTotal.toFixed(2), ""]);
 
@@ -101,7 +127,7 @@ router.get("/invoices/export/excel/all", requireAuth, async (_req, res): Promise
   const itemHeaders = ["رقم الفاتورة", "المورد", "التاريخ", "رقم القطعة", "الوصف", "الكمية", "الوحدة", "سعر الوحدة", "الإجمالي"];
   const itemRows: any[][] = [];
   for (const inv of invoices) {
-    for (const item of inv.items ?? []) {
+    for (const item of (itemsByInvoiceId[inv.id] || [])) {
       itemRows.push([
         inv.invoiceNumber ?? "",
         inv.supplier ?? "",

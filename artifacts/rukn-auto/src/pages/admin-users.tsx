@@ -3,7 +3,7 @@
  * المدير: يرى مستخدمي مؤسسته فقط (بدون سوبر أدمن)
  * السوبر أدمن: يرى الجميع + يمنح/يسحب صلاحية القطع من أي دور
  */
-import { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo, Fragment } from "react";
 import { useAuth, getAuthHeader } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,7 +11,7 @@ import { toast } from "sonner";
 import {
   UserPlus, Pencil, Power, PowerOff, Trash2,
   Eye, EyeOff, Database, AlertTriangle, Clock,
-  Users, ShieldCheck, User, Shield,
+  Users, ShieldCheck, User, Shield, ChevronDown, ChevronUp, Building2
 } from "lucide-react";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
@@ -105,11 +105,12 @@ function PartsToggle({
       onClick={toggle}
       disabled={busy}
       title={canEditParts ? "سحب الصلاحية" : "منح الصلاحية"}
-      className={`relative inline-flex h-5 w-9 items-center rounded-full transition-all duration-200 focus:outline-none disabled:opacity-40
-        ${canEditParts ? "bg-primary shadow-[0_0_8px_theme(colors.primary/30%)]" : "bg-muted-foreground/20"}`}
+      className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/50 disabled:cursor-not-allowed disabled:opacity-50
+        ${canEditParts ? "bg-emerald-500 shadow-[0_0_10px_theme(colors.emerald.500/40%)]" : "bg-muted-foreground/30"}`}
+      dir="rtl"
     >
-      <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow-sm transition-transform duration-200
-        ${canEditParts ? "translate-x-[18px]" : "translate-x-[2px]"}`}
+      <span className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-sm ring-0 transition-transform duration-200 ease-in-out
+        ${canEditParts ? "-translate-x-4" : "translate-x-0"}`}
       />
     </button>
   );
@@ -125,12 +126,15 @@ interface UserRecord {
   canEditParts: boolean;
   createdAt: string;
   lastLogin: string | null;
+  orgName?: string | null;
+  orgId?: number | null;
 }
 
 export default function UsersAdmin() {
-  const { token, user: currentUser, isSuperAdmin } = useAuth();
+  const { token, user: currentUser, isSuperAdmin, activeOrgId } = useAuth();
   const [users, setUsers] = useState<UserRecord[]>([]);
   const [loading, setLoading] = useState(true);
+  const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
 
   // نموذج إضافة
   const [newUsername, setNewUsername] = useState("");
@@ -162,7 +166,17 @@ export default function UsersAdmin() {
   const fetchUsers = async () => {
     try {
       const res = await fetch(`${BASE_URL}/api/users`, { headers });
-      if (res.ok) setUsers(await res.json());
+      if (res.ok) {
+        const data = await res.json();
+        const roleWeight: Record<string, number> = { superadmin: 1, admin: 2, employee: 3 };
+        data.sort((a: UserRecord, b: UserRecord) => {
+          if (roleWeight[a.role] !== roleWeight[b.role]) {
+            return roleWeight[a.role] - roleWeight[b.role];
+          }
+          return a.displayName.localeCompare(b.displayName);
+        });
+        setUsers(data);
+      }
     } finally {
       setLoading(false);
     }
@@ -179,6 +193,10 @@ export default function UsersAdmin() {
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newUsername || !newPassword || !newDisplayName) return;
+    if (!/^[a-zA-Z0-9_.-]+$/.test(newUsername)) {
+      toast.error("اسم المستخدم يجب أن يكون باللغة الإنجليزية ولا يحتوي على مسافات");
+      return;
+    }
     setAdding(true);
     try {
       const res = await fetch(`${BASE_URL}/api/users`, {
@@ -292,10 +310,12 @@ export default function UsersAdmin() {
           <span className="font-semibold text-foreground">{activeCount}</span> نشط
         </div>
         <div className="flex-1" />
-        <Button size="sm" variant="outline" className="gap-2 h-8 text-xs" onClick={() => setShowForm(s => !s)}>
-          <UserPlus className="w-3.5 h-3.5" />
-          {showForm ? "إلغاء" : "إضافة مستخدم"}
-        </Button>
+        {(!isSuperAdmin || activeOrgId) && (
+          <Button size="sm" variant="outline" className="gap-2 h-8 text-xs" onClick={() => setShowForm(s => !s)}>
+            <UserPlus className="w-3.5 h-3.5" />
+            {showForm ? "إلغاء" : "إضافة مستخدم"}
+          </Button>
+        )}
       </div>
 
       {/* ── نموذج الإضافة (قابل للطي) ── */}
@@ -310,7 +330,16 @@ export default function UsersAdmin() {
               </div>
               <div className="space-y-1.5">
                 <label className="text-xs text-muted-foreground font-medium">اسم المستخدم</label>
-                <Input value={newUsername} onChange={e => setNewUsername(e.target.value.toLowerCase())} placeholder="ahmed" className="h-9 font-mono" dir="ltr" />
+                <Input 
+                  value={newUsername} 
+                  onChange={e => setNewUsername(e.target.value.toLowerCase().replace(/\s+/g, ''))} 
+                  placeholder="ahmed" 
+                  className="h-9 font-mono" 
+                  dir="ltr" 
+                  pattern="[a-zA-Z0-9_.-]+" 
+                  title="أحرف إنجليزية، أرقام، شرطة، نقطة فقط"
+                />
+                <p className="text-[10px] text-muted-foreground">أحرف إنجليزية وأرقام فقط (للدخول)</p>
               </div>
             </div>
 
@@ -400,106 +429,181 @@ export default function UsersAdmin() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-border/50">
-                {users.map(u => {
-                  const isSelf = u.id === currentUser?.id;
-                  return (
-                    <tr
-                      key={u.id}
-                      className={`transition-colors hover:bg-muted/20 ${!u.isActive ? "opacity-40" : ""} ${isSelf ? "bg-primary/4" : ""}`}
-                    >
-                      {/* الاسم */}
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-2.5">
-                          <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0
-                            ${u.role === "superadmin" ? "bg-amber-400/15 text-amber-400" : u.role === "admin" ? "bg-violet-400/15 text-violet-400" : "bg-emerald-400/15 text-emerald-400"}`}>
-                            {u.displayName.charAt(0)}
-                          </div>
-                          <div>
-                            <div className="flex items-center gap-1.5">
-                              <span className="font-medium text-[13px]">{u.displayName}</span>
-                              {isSelf && (
-                                <span className="text-[10px] px-1.5 py-0.5 rounded bg-primary/15 text-primary font-medium border border-primary/20">أنت</span>
+                {(() => {
+                  const renderUserRow = (u: UserRecord, isGrouped = false) => {
+                    const isSelf = u.id === currentUser?.id;
+                    return (
+                      <tr
+                        key={u.id}
+                        className={`transition-colors hover:bg-muted/20 ${!u.isActive ? "opacity-40" : ""} ${isSelf ? "bg-primary/4" : ""}`}
+                      >
+                        {/* الاسم */}
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-2.5">
+                            <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0
+                              ${u.role === "superadmin" ? "bg-amber-400/15 text-amber-400" : u.role === "admin" ? "bg-violet-400/15 text-violet-400" : "bg-emerald-400/15 text-emerald-400"}`}>
+                              {u.displayName.charAt(0)}
+                            </div>
+                            <div>
+                              <div className="flex items-center gap-1.5">
+                                <span className="font-medium text-[13px]">{u.displayName}</span>
+                                {isSelf && (
+                                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-primary/15 text-primary font-medium border border-primary/20">أنت</span>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-2 mt-0.5">
+                                <span className="text-[11px] font-mono text-muted-foreground/60">{u.username}</span>
+                                {u.department && (
+                                  <span className="text-[11px] text-muted-foreground/50">{u.department}</span>
+                                )}
+                              </div>
+                              {/* إظهار اسم المؤسسة لمدير المنصة عند عرض الكل إذا لم تكن مقسمة لمجموعات أو للتأكيد */}
+                              {!isGrouped && isSuperAdmin && !activeOrgId && (
+                                <div className="mt-1">
+                                  {u.orgName ? (
+                                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20">
+                                      المؤسسة: {u.orgName}
+                                    </span>
+                                  ) : u.role === "superadmin" ? (
+                                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-500 border border-amber-500/20">
+                                      مدير منصة (Global)
+                                    </span>
+                                  ) : (
+                                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-red-500/10 text-red-400 border border-red-500/20">
+                                      غير مرتبط بمؤسسة!
+                                    </span>
+                                  )}
+                                </div>
                               )}
                             </div>
-                            <div className="flex items-center gap-2 mt-0.5">
-                              <span className="text-[11px] font-mono text-muted-foreground/60">{u.username}</span>
-                              {u.department && (
-                                <span className="text-[11px] text-muted-foreground/50">{u.department}</span>
-                              )}
-                            </div>
                           </div>
-                        </div>
-                      </td>
+                        </td>
 
-                      {/* الدور */}
-                      <td className="px-4 py-3">
-                        <RolePill role={u.role} />
-                      </td>
+                        {/* الدور */}
+                        <td className="px-4 py-3">
+                          <RolePill role={u.role} />
+                        </td>
 
-                      {/* صلاحية القطع */}
-                      <td className="px-4 py-3 text-center">
-                        <div className="flex justify-center">
-                          <PartsToggle
-                            userId={u.id}
-                            canEditParts={u.canEditParts}
-                            targetRole={u.role}
-                            viewerIsSuperAdmin={isSuperAdmin}
-                            onChanged={fetchUsers}
-                            headers={headers}
-                          />
-                        </div>
-                      </td>
+                        {/* صلاحية القطع */}
+                        <td className="px-4 py-3 text-center">
+                          <div className="flex justify-center">
+                            <PartsToggle
+                              userId={u.id}
+                              canEditParts={u.canEditParts}
+                              targetRole={u.role}
+                              viewerIsSuperAdmin={isSuperAdmin}
+                              onChanged={fetchUsers}
+                              headers={headers}
+                            />
+                          </div>
+                        </td>
 
-                      {/* آخر دخول */}
-                      <td className="px-4 py-3 text-center">
-                        <span className="text-[11px] text-muted-foreground/60 inline-flex items-center gap-1 justify-center">
-                          <Clock className="w-3 h-3" />
-                          {formatDate(u.lastLogin)}
-                        </span>
-                      </td>
+                        {/* آخر دخول */}
+                        <td className="px-4 py-3 text-center">
+                          <span className="text-[11px] text-muted-foreground/60 inline-flex items-center gap-1 justify-center">
+                            <Clock className="w-3 h-3" />
+                            {formatDate(u.lastLogin)}
+                          </span>
+                        </td>
 
-                      {/* الحالة */}
-                      <td className="px-4 py-3 text-center">
-                        <span className={`inline-flex items-center gap-1.5 text-[11px] font-medium`}>
-                          <span className={`w-1.5 h-1.5 rounded-full ${u.isActive ? "bg-emerald-400" : "bg-red-400/70"}`} />
-                          {u.isActive ? "نشط" : "معطّل"}
-                        </span>
-                      </td>
+                        {/* الحالة */}
+                        <td className="px-4 py-3 text-center">
+                          <span className={`inline-flex items-center gap-1.5 text-[11px] font-medium`}>
+                            <span className={`w-1.5 h-1.5 rounded-full ${u.isActive ? "bg-emerald-400" : "bg-red-400/70"}`} />
+                            {u.isActive ? "نشط" : "معطّل"}
+                          </span>
+                        </td>
 
-                      {/* الإجراءات */}
-                      <td className="px-4 py-3">
-                        <div className="flex items-center justify-center gap-0.5">
-                          <button
-                            onClick={() => openEdit(u)}
-                            title="تعديل"
-                            className="h-7 w-7 rounded-md flex items-center justify-center text-muted-foreground/50 hover:text-foreground hover:bg-muted/60 transition-colors"
-                          >
-                            <Pencil className="h-3.5 w-3.5" />
-                          </button>
-                          {u.id !== currentUser?.id && (
+                        {/* الإجراءات */}
+                        <td className="px-4 py-3">
+                          <div className="flex items-center justify-center gap-0.5">
                             <button
-                              onClick={() => handleToggleActive(u)}
-                              title={u.isActive ? "تعطيل" : "تفعيل"}
-                              className={`h-7 w-7 rounded-md flex items-center justify-center transition-colors
-                                ${u.isActive ? "text-muted-foreground/50 hover:text-red-400 hover:bg-red-400/8" : "text-muted-foreground/50 hover:text-emerald-400 hover:bg-emerald-400/8"}`}
+                              onClick={() => openEdit(u)}
+                              title="تعديل"
+                              className="h-7 w-7 rounded-md flex items-center justify-center text-muted-foreground/50 hover:text-foreground hover:bg-muted/60 transition-colors"
                             >
-                              {u.isActive ? <PowerOff className="h-3.5 w-3.5" /> : <Power className="h-3.5 w-3.5" />}
+                              <Pencil className="h-3.5 w-3.5" />
                             </button>
-                          )}
-                          {u.role !== "superadmin" && u.id !== currentUser?.id && (
-                            <button
-                              onClick={() => setDeleteTarget(u)}
-                              title="حذف"
-                              className="h-7 w-7 rounded-md flex items-center justify-center text-muted-foreground/40 hover:text-red-400 hover:bg-red-400/8 transition-colors"
-                            >
-                              <Trash2 className="h-3.5 w-3.5" />
-                            </button>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
+                            {u.id !== currentUser?.id && (
+                              <button
+                                onClick={() => handleToggleActive(u)}
+                                title={u.isActive ? "تعطيل" : "تفعيل"}
+                                className={`h-7 w-7 rounded-md flex items-center justify-center transition-colors
+                                  ${u.isActive ? "text-muted-foreground/50 hover:text-red-400 hover:bg-red-400/8" : "text-muted-foreground/50 hover:text-emerald-400 hover:bg-emerald-400/8"}`}
+                              >
+                                {u.isActive ? <PowerOff className="h-3.5 w-3.5" /> : <Power className="h-3.5 w-3.5" />}
+                              </button>
+                            )}
+                            {u.role !== "superadmin" && u.id !== currentUser?.id && (
+                              <button
+                                onClick={() => setDeleteTarget(u)}
+                                title="حذف"
+                                className="h-7 w-7 rounded-md flex items-center justify-center text-muted-foreground/40 hover:text-red-400 hover:bg-red-400/8 transition-colors"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  };
+
+                  if (!isSuperAdmin || activeOrgId) {
+                    return users.map(u => renderUserRow(u, false));
+                  }
+
+                  // تجميع المستخدمين للمشرف العام
+                  const groupsMap = new Map<string, { id: string; name: string | null; users: UserRecord[] }>();
+                  users.forEach(u => {
+                    const key = u.orgId ? String(u.orgId) : "global";
+                    if (!groupsMap.has(key)) {
+                      groupsMap.set(key, { id: key, name: u.orgName ?? null, users: [] });
+                    }
+                    groupsMap.get(key)!.users.push(u);
+                  });
+
+                  const sortedGroups = Array.from(groupsMap.values()).sort((a, b) => {
+                    if (a.id === "global") return -1;
+                    if (b.id === "global") return 1;
+                    return (a.name || "").localeCompare(b.name || "");
+                  });
+
+                  return sortedGroups.map(group => {
+                    const isGlobal = group.id === "global";
+                    const isExpanded = expandedGroups[group.id] !== false; // الافتراضي هو الفتح
+
+                    return (
+                      <React.Fragment key={group.id}>
+                        {/* ترويسة المجموعة */}
+                        <tr
+                          className="bg-muted/10 hover:bg-muted/20 cursor-pointer border-t-[3px] border-border"
+                          onClick={() => setExpandedGroups(prev => ({ ...prev, [group.id]: !isExpanded }))}
+                        >
+                          <td colSpan={6} className="px-4 py-2 text-right">
+                            <div className="flex items-center gap-2">
+                              {isExpanded ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
+                              {isGlobal ? (
+                                <ShieldCheck className="w-4 h-4 text-amber-500" />
+                              ) : (
+                                <Building2 className="w-4 h-4 text-blue-400" />
+                              )}
+                              <span className="font-semibold text-sm text-foreground">
+                                {isGlobal ? "مدراء المنصة والمستخدمين العائمين (Global)" : `المؤسسة: ${group.name || "مؤسسة محذوفة"}`}
+                              </span>
+                              <span className="text-[10px] bg-muted px-2 py-0.5 rounded-full text-muted-foreground mr-2">
+                                {group.users.length} مستخدم
+                              </span>
+                            </div>
+                          </td>
+                        </tr>
+                        
+                        {/* صفوف المستخدمين داخل المجموعة */}
+                        {isExpanded && group.users.map(u => renderUserRow(u, true))}
+                      </React.Fragment>
+                    );
+                  });
+                })()}
               </tbody>
             </table>
           </div>

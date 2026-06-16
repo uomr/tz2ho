@@ -76,14 +76,59 @@ router.get("/super-admin/orgs", requireSuperAdmin, async (_req, res): Promise<vo
   res.json(result.rows);
 });
 
+// ── POST /api/super-admin/orgs ──────────────────────────────
+router.post("/super-admin/orgs", requireSuperAdmin, async (req, res): Promise<void> => {
+  const { name, slug, contactEmail, plan } = req.body;
+  if (!name || !slug) {
+    res.status(400).json({ error: "اسم المؤسسة والـ slug مطلوبة" });
+    return;
+  }
+
+  const selectedPlan = plan || "trial";
+  const limits: Record<string, number> = { free: 50, pro: 1000, enterprise: 999999, trial: 100 };
+  
+  try {
+    const [org] = await db
+      .insert(organizationsTable)
+      .values({
+        name: name.trim(),
+        slug: slug.trim().toLowerCase(),
+        contactEmail: contactEmail?.trim() || null,
+        plan: selectedPlan,
+        status: "active",
+        maxInvoicesPerMonth: limits[selectedPlan] || 50,
+      })
+      .returning();
+      
+    res.status(201).json(org);
+  } catch (err: any) {
+    if (err.code === "23505") { // Unique violation
+      res.status(409).json({ error: "اسم المؤسسة أو المعرّف (slug) موجود مسبقاً" });
+    } else {
+      res.status(500).json({ error: "فشل إنشاء المؤسسة" });
+    }
+  }
+});
+
 // ── PATCH /api/super-admin/orgs/:id ─────────────────────────
 router.patch("/super-admin/orgs/:id", requireSuperAdmin, async (req, res): Promise<void> => {
   const id = Number(req.params.id);
   if (!id) { res.status(400).json({ error: "معرّف غير صالح" }); return; }
 
-  const { status, plan, maxInvoicesPerMonth } = req.body;
+  const { status, plan, maxInvoicesPerMonth, name, slug, contactEmail } = req.body;
   const updates: Record<string, any> = {};
 
+  if (name !== undefined) {
+    if (name.trim() === "") { res.status(400).json({ error: "اسم المؤسسة مطلوب" }); return; }
+    updates.name = name.trim();
+  }
+  if (slug !== undefined) {
+    if (slug.trim() === "") { res.status(400).json({ error: "المعرّف (slug) مطلوب" }); return; }
+    updates.slug = slug.trim().toLowerCase();
+  }
+  if (contactEmail !== undefined) {
+    updates.contactEmail = contactEmail ? contactEmail.trim() : null;
+  }
   if (status) {
     if (!["active", "suspended", "trial"].includes(status)) {
       res.status(400).json({ error: "حالة غير صالحة" }); return;
@@ -106,14 +151,22 @@ router.patch("/super-admin/orgs/:id", requireSuperAdmin, async (req, res): Promi
     res.status(400).json({ error: "لا يوجد شيء للتحديث" }); return;
   }
 
-  const [updated] = await db
-    .update(organizationsTable)
-    .set(updates)
-    .where(eq(organizationsTable.id, id))
-    .returning();
+  try {
+    const [updated] = await db
+      .update(organizationsTable)
+      .set(updates)
+      .where(eq(organizationsTable.id, id))
+      .returning();
 
-  if (!updated) { res.status(404).json({ error: "المنظمة غير موجودة" }); return; }
-  res.json(updated);
+    if (!updated) { res.status(404).json({ error: "المنظمة غير موجودة" }); return; }
+    res.json(updated);
+  } catch (err: any) {
+    if (err.code === "23505") { // Unique violation
+      res.status(409).json({ error: "اسم المؤسسة أو المعرّف (slug) موجود مسبقاً" });
+    } else {
+      res.status(500).json({ error: "فشل تحديث المؤسسة" });
+    }
+  }
 });
 
 export default router;

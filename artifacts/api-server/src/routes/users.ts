@@ -4,8 +4,8 @@
 import { Router, type IRouter } from "express";
 import bcrypt from "bcryptjs";
 import { db } from "@workspace/db";
-import { usersTable } from "@workspace/db";
-import { eq, and, ne } from "drizzle-orm";
+import { usersTable, organizationsTable } from "@workspace/db";
+import { eq, and, ne, isNull, desc, sql } from "drizzle-orm";
 import { requireAdmin, requireSuperAdmin } from "../middlewares/auth.js";
 import { logger } from "../lib/logger.js";
 
@@ -21,7 +21,7 @@ router.get("/users", requireAdmin, async (req, res): Promise<void> => {
   const whereClause = isSuperAdmin
     ? undefined
     : and(
-        eq(usersTable.orgId, req.user!.orgId!),
+        req.user!.orgId === null ? isNull(usersTable.orgId) : eq(usersTable.orgId, req.user!.orgId),
         ne(usersTable.role, "superadmin")
       );
 
@@ -35,12 +35,17 @@ router.get("/users", requireAdmin, async (req, res): Promise<void> => {
       isActive: usersTable.isActive,
       canEditParts: usersTable.canEditParts,
       orgId: usersTable.orgId,
+      orgName: organizationsTable.name,
       createdAt: usersTable.createdAt,
       lastLogin: usersTable.lastLogin,
     })
     .from(usersTable)
+    .leftJoin(organizationsTable, eq(usersTable.orgId, organizationsTable.id))
     .where(whereClause)
-    .orderBy(usersTable.createdAt);
+    .orderBy(
+      desc(sql`case when ${usersTable.role} = 'superadmin' then 1 else 0 end`),
+      desc(usersTable.createdAt)
+    );
 
   res.json(users);
 });
@@ -54,6 +59,13 @@ router.post("/users", requireAdmin, async (req, res): Promise<void> => {
     res.status(400).json({ error: "اسم المستخدم وكلمة السر والاسم مطلوبة" });
     return;
   }
+  
+  // التحقق من أن اسم المستخدم باللغة الإنجليزية ولا يحتوي على مسافات
+  if (!/^[a-zA-Z0-9_.-]+$/.test(username)) {
+    res.status(400).json({ error: "اسم المستخدم يجب أن يكون باللغة الإنجليزية ولا يحتوي على مسافات (مسموح بالأحرف، الأرقام، _ ، - ، . فقط)" });
+    return;
+  }
+
   if (password.length < 6) {
     res.status(400).json({ error: "كلمة السر يجب أن تكون 6 أحرف على الأقل" });
     return;
@@ -142,6 +154,10 @@ router.patch("/users/:id", requireAdmin, async (req, res): Promise<void> => {
     }
     if (targetUser.orgId !== req.user?.orgId) {
       res.status(403).json({ error: "لا يمكن تعديل مستخدم من مؤسسة أخرى" });
+      return;
+    }
+    if (targetUser.role === "admin" && targetUser.id !== req.user?.userId) {
+      res.status(403).json({ error: "لا يمكن للمدير تعديل حساب مدير آخر" });
       return;
     }
   }

@@ -7,9 +7,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 import {
   Building2, Users, FileText, TrendingUp, Shield,
-  CheckCircle2, AlertTriangle, Clock, RefreshCw,
-  ChevronDown, Globe,
+  CheckCircle2, AlertTriangle, RefreshCw,
+  ChevronDown, Globe, LayoutDashboard, Settings
 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 const BASE_URL = import.meta.env.BASE_URL?.replace(/\/$/, "") || "";
 
@@ -75,6 +78,20 @@ export default function SuperAdmin() {
   const [actionLoading, setActionLoading] = useState<number | null>(null);
   const [expandedOrg, setExpandedOrg] = useState<number | null>(null);
 
+  // حالة إضافة مؤسسة جديدة
+  const [showAddOrg, setShowAddOrg] = useState(false);
+  const [newOrgName, setNewOrgName] = useState("");
+  const [newOrgSlug, setNewOrgSlug] = useState("");
+  const [newOrgEmail, setNewOrgEmail] = useState("");
+  const [addingOrg, setAddingOrg] = useState(false);
+
+  // حالة تعديل مؤسسة
+  const [editOrg, setEditOrg] = useState<OrgRow | null>(null);
+  const [editOrgName, setEditOrgName] = useState("");
+  const [editOrgSlug, setEditOrgSlug] = useState("");
+  const [editOrgEmail, setEditOrgEmail] = useState("");
+  const [savingOrg, setSavingOrg] = useState(false);
+
   const load = async () => {
     setLoading(true);
     try {
@@ -113,6 +130,63 @@ export default function SuperAdmin() {
     }
   };
 
+  const handleAddOrg = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newOrgName || !newOrgSlug) return;
+    setAddingOrg(true);
+    try {
+      const res = await fetch(`${BASE_URL}/api/super-admin/orgs`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({
+          name: newOrgName,
+          slug: newOrgSlug,
+          contactEmail: newOrgEmail,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error || "فشل إنشاء الشركة");
+        return;
+      }
+      toast.success(`تم تسجيل شركة "${newOrgName}" بنجاح`);
+      setShowAddOrg(false);
+      setNewOrgName("");
+      setNewOrgSlug("");
+      setNewOrgEmail("");
+      load();
+    } finally {
+      setAddingOrg(false);
+    }
+  };
+
+  const handleEditOrgSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editOrg || !editOrgName || !editOrgSlug) return;
+    setSavingOrg(true);
+    try {
+      const res = await fetch(`${BASE_URL}/api/super-admin/orgs/${editOrg.id}`, {
+        method: "PATCH",
+        headers,
+        body: JSON.stringify({
+          name: editOrgName,
+          slug: editOrgSlug,
+          contactEmail: editOrgEmail,
+        }),
+      });
+      if (!res.ok) {
+        const d = await res.json();
+        toast.error(d.error || "فشل تحديث المؤسسة");
+        return;
+      }
+      toast.success("تم تحديث بيانات المؤسسة بنجاح");
+      setEditOrg(null);
+      load();
+    } finally {
+      setSavingOrg(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64 gap-2 text-muted-foreground">
@@ -134,13 +208,18 @@ export default function SuperAdmin() {
           </h2>
           <p className="text-muted-foreground text-sm mt-1">مراقبة جميع الشركات المسجّلة وإدارتها</p>
         </div>
-        <button
-          onClick={load}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors border border-border"
-        >
-          <RefreshCw className="w-3.5 h-3.5" />
-          تحديث
-        </button>
+        <div className="flex items-center gap-3">
+          <Button variant="outline" onClick={() => setShowAddOrg(true)} className="gap-2 bg-transparent text-sm">
+            + تسجيل شركة جديدة
+          </Button>
+          <button
+            onClick={load}
+            className="flex items-center gap-1.5 px-3 py-2 h-9 rounded-md text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors border border-border"
+          >
+            <RefreshCw className="w-3.5 h-3.5" />
+            تحديث
+          </button>
+        </div>
       </div>
 
       {/* ── إحصاءات المنصة ── */}
@@ -253,7 +332,34 @@ export default function SuperAdmin() {
                       </div>
 
                       {/* أزرار الإجراءات */}
-                      <div className="flex flex-wrap gap-2">
+                      <div className="flex flex-wrap gap-2 items-center">
+                        <button
+                          onClick={() => {
+                            // setActiveOrgId(org.id);
+                            // setLocation("/");
+                            window.location.href = "/";
+                          }}
+                          className="flex items-center gap-1.5 text-[11px] font-bold px-3 py-1.5 rounded-lg border border-primary text-primary hover:bg-primary/10 transition-colors shadow-sm shadow-primary/20"
+                        >
+                          <LayoutDashboard className="w-3.5 h-3.5" />
+                          دخول لإدارة المؤسسة
+                        </button>
+
+                        <button
+                          onClick={() => {
+                            setEditOrg(org);
+                            setEditOrgName(org.name);
+                            setEditOrgSlug(org.slug);
+                            setEditOrgEmail(org.contact_email || "");
+                          }}
+                          className="flex items-center gap-1 text-[11px] font-bold px-3 py-1.5 rounded-lg border border-border text-muted-foreground hover:border-primary/40 hover:text-primary transition-colors"
+                        >
+                          <Settings className="w-3.5 h-3.5" />
+                          تعديل
+                        </button>
+
+                        <div className="w-px h-5 bg-border/50 mx-1" />
+
                         {/* تغيير الخطة */}
                         {["free", "trial", "pro", "enterprise"].map(plan => (
                           <button
@@ -302,6 +408,114 @@ export default function SuperAdmin() {
         </CardContent>
       </Card>
 
+
+      {/* ── نافذة إضافة مؤسسة ── */}
+      <Dialog open={showAddOrg} onOpenChange={setShowAddOrg}>
+        <DialogContent className="sm:max-w-[425px]" dir="rtl">
+          <DialogHeader>
+            <DialogTitle className="text-right flex items-center gap-2 text-lg">
+              <Building2 className="w-5 h-5 text-primary" />
+              تسجيل شركة جديدة
+            </DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleAddOrg} className="space-y-4 mt-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">اسم الشركة (العلامة التجارية)</label>
+              <Input
+                placeholder="مثال: شركة التقنية الحديثة"
+                value={newOrgName}
+                onChange={e => setNewOrgName(e.target.value)}
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">المعرّف الإنجليزي (Slug)</label>
+              <Input
+                placeholder="مثال: modern-tech"
+                value={newOrgSlug}
+                onChange={e => setNewOrgSlug(e.target.value.toLowerCase().replace(/\s+/g, '-'))}
+                required
+                className="text-left"
+                dir="ltr"
+              />
+              <p className="text-[10px] text-muted-foreground">يُستخدم في الروابط ومعرفات النظام الداخلية ولا يمكن تغييره لاحقاً.</p>
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">البريد الإلكتروني (اختياري)</label>
+              <Input
+                type="email"
+                placeholder="info@company.com"
+                value={newOrgEmail}
+                onChange={e => setNewOrgEmail(e.target.value)}
+                className="text-left"
+                dir="ltr"
+              />
+            </div>
+            <div className="pt-4 flex justify-end gap-2 border-t border-border/50">
+              <Button type="button" variant="outline" onClick={() => setShowAddOrg(false)}>
+                إلغاء
+              </Button>
+              <Button type="submit" disabled={addingOrg || !newOrgName || !newOrgSlug}>
+                {addingOrg ? "جاري التسجيل..." : "تسجيل الشركة"}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── نافذة تعديل مؤسسة ── */}
+      <Dialog open={!!editOrg} onOpenChange={(o) => !o && setEditOrg(null)}>
+        <DialogContent className="sm:max-w-[425px]" dir="rtl">
+          <DialogHeader>
+            <DialogTitle className="text-right flex items-center gap-2 text-lg">
+              <Settings className="w-5 h-5 text-primary" />
+              تعديل بيانات الشركة
+            </DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleEditOrgSubmit} className="space-y-4 mt-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">اسم الشركة (العلامة التجارية)</label>
+              <Input
+                placeholder="مثال: شركة التقنية الحديثة"
+                value={editOrgName}
+                onChange={e => setEditOrgName(e.target.value)}
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">المعرّف الإنجليزي (Slug)</label>
+              <Input
+                placeholder="مثال: modern-tech"
+                value={editOrgSlug}
+                onChange={e => setEditOrgSlug(e.target.value.toLowerCase().replace(/\s+/g, '-'))}
+                required
+                className="text-left"
+                dir="ltr"
+              />
+              <p className="text-[10px] text-muted-foreground">تغيير المعرّف قد يؤثر على روابط تسجيل الدخول للمستخدمين!</p>
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">البريد الإلكتروني (اختياري)</label>
+              <Input
+                type="email"
+                placeholder="info@company.com"
+                value={editOrgEmail}
+                onChange={e => setEditOrgEmail(e.target.value)}
+                className="text-left"
+                dir="ltr"
+              />
+            </div>
+            <div className="pt-4 flex justify-end gap-2 border-t border-border/50">
+              <Button type="button" variant="outline" onClick={() => setEditOrg(null)}>
+                إلغاء
+              </Button>
+              <Button type="submit" disabled={savingOrg || !editOrgName || !editOrgSlug}>
+                {savingOrg ? "جاري الحفظ..." : "حفظ التعديلات"}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

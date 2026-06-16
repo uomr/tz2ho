@@ -3,10 +3,12 @@ import {
   LayoutDashboard, ScanLine, FileText, Database,
   ChevronRight, Sun, Moon, LogOut, Users, KeyRound,
   Eye, EyeOff, Cpu, ShieldCheck, ChevronDown, BarChart3, Shield,
+  Loader2, CheckCircle2, X as XIcon, AlertCircle,
   ChevronsLeft, ChevronsRight,
 } from "lucide-react";
 import { useState, useEffect, createContext, useContext } from "react";
 import { useAuth, getAuthHeader } from "@/contexts/AuthContext";
+import { useExtraction } from "@/contexts/ExtractionContext";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem,
   DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger,
@@ -67,13 +69,22 @@ const SIDEBAR_W = 220;
 const SIDEBAR_W_COLLAPSED = 54;
 
 export function Layout({ children }: { children: React.ReactNode }) {
-  const [location] = useLocation();
+  const [location, setLocation] = useLocation();
   const { theme, toggleTheme } = useTheme();
-  const { user, logout, isAdmin, isSuperAdmin, token } = useAuth();
+  const { user, logout, isAdmin, isSuperAdmin, token, activeOrgId, setActiveOrgId } = useAuth();
+  const { progress, cancelExtraction, dismissCompletion } = useExtraction();
   const canParts = isAdmin || (user?.canEditParts ?? false);
   const roleKey = isSuperAdmin ? "superadmin" : (isAdmin ? "admin" : "employee");
   const colors = ROLE[roleKey];
 
+  // تلاشي تلقائي لبانر الاكتمال بعد 10 ثوان
+  useEffect(() => {
+    if (progress.status === "done") {
+      const timer = setTimeout(dismissCompletion, 10000);
+      return () => clearTimeout(timer);
+    }
+    return undefined;
+  }, [progress.status, dismissCompletion]);
   const [isCollapsed, setIsCollapsed] = useState<boolean>(() =>
     typeof window !== "undefined" && localStorage.getItem("rukn-sidebar-collapsed") === "true"
   );
@@ -114,9 +125,9 @@ export function Layout({ children }: { children: React.ReactNode }) {
   ];
   const adminItems = isAdmin ? [
     { href: "/admin/users",    label: "المستخدمون",  icon: Users },
-    { href: "/admin/settings", label: "نموذج الذكاء", icon: Cpu },
   ] : [];
   const superAdminItems = isSuperAdmin ? [
+    { href: "/admin/settings", label: "إعدادات المنصة", icon: Cpu },
     { href: "/super-admin", label: "لوحة المنصة", icon: Shield },
   ] : [];
 
@@ -187,7 +198,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
         }}
       >
         {/* الشعار */}
-        <div className="flex items-center gap-3 px-3 py-4 overflow-hidden shrink-0">
+        <div className={`flex items-center gap-3 ${isCollapsed ? "px-[11px]" : "px-3"} py-4 overflow-hidden shrink-0 transition-all duration-150`}>
           <div
             className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0 shadow-lg"
             style={{ background: colors.gradient }}
@@ -258,13 +269,17 @@ export function Layout({ children }: { children: React.ReactNode }) {
         </div>
 
         {/* المستخدم */}
-        <div className="px-2 pb-3 shrink-0">
+        <div className={`${isCollapsed ? "px-1.5" : "px-2"} pb-3 shrink-0 transition-all duration-150`}>
           <div className="h-px mb-2 mx-1" style={{ background: "hsl(var(--sidebar-border))" }} />
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button
-                className="w-full flex items-center gap-2.5 p-2 rounded-xl transition-colors duration-100 outline-none group"
-                style={{ border: `1px solid ${colors.border}` }}
+                className={`w-full flex items-center rounded-xl transition-all duration-150 outline-none group ${isCollapsed ? "p-1.5" : "p-2"}`}
+                style={{ 
+                  border: `1px solid ${colors.border}`,
+                  gap: isCollapsed ? "0px" : "10px",
+                  justifyContent: isCollapsed ? "center" : "flex-start"
+                }}
                 onMouseEnter={e => { e.currentTarget.style.background = colors.dim; }}
                 onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
                 title={isCollapsed ? (user?.displayName ?? "الحساب") : undefined}
@@ -290,9 +305,8 @@ export function Layout({ children }: { children: React.ReactNode }) {
             <DropdownMenuContent
               side="top"
               align="end"
-              sideOffset={8}
-              className="w-52 rounded-xl border-border bg-card shadow-2xl"
-              dir="rtl"
+              sideOffset={12}
+              className="w-56 p-2 rounded-xl border-border bg-popover shadow-xl"
             >
               <DropdownMenuLabel className="px-3 py-2.5">
                 <p className="text-xs font-bold text-foreground truncate">{user?.displayName ?? "مستخدم"}</p>
@@ -350,6 +364,114 @@ export function Layout({ children }: { children: React.ReactNode }) {
             <span className="hidden md:block">ERP</span>
           </div>
         </header>
+
+        {/* ══ بانر إدارة المؤسسة (Impersonation) ══ */}
+        {isSuperAdmin && activeOrgId && (
+          <div className="flex items-center gap-3 px-5 py-2.5 bg-primary/10 border-b border-primary/20 text-primary">
+            <LayoutDashboard className="w-4 h-4 shrink-0" />
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-bold">وضع إدارة مؤسسة</p>
+              <p className="text-[10px] opacity-80 mt-0.5">أنت الآن تقوم بإدارة هذه المؤسسة (معرّف: {activeOrgId})</p>
+            </div>
+            <button
+              onClick={() => {
+                setActiveOrgId(null);
+                setLocation("/super-admin");
+              }}
+              className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+            >
+              الخروج والعودة للمنصة
+            </button>
+          </div>
+        )}
+
+        {/* ══ بانر تقدم الاستخراج الذكي ══ */}
+        {progress.status === "extracting" && (
+          <div
+            className="flex items-center gap-3 px-5 py-2.5 border-b cursor-pointer select-none"
+            style={{
+              background: "linear-gradient(90deg, rgba(139,92,246,0.08), rgba(59,130,246,0.08))",
+              borderColor: "rgba(139,92,246,0.2)",
+            }}
+            onClick={() => { if (location !== "/extract") setLocation("/extract"); }}
+          >
+            <Loader2 className="w-4 h-4 animate-spin text-purple-400 shrink-0" />
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-semibold text-purple-300">
+                جاري استخراج الفاتورة — الصفحة {progress.currentPage} من {progress.totalPages}
+              </p>
+              {/* شريط تقدم متحرك */}
+              <div className="mt-1.5 h-1 rounded-full bg-purple-900/30 overflow-hidden">
+                <div
+                  className="h-full rounded-full"
+                  style={{
+                    background: "linear-gradient(90deg, #8b5cf6, #3b82f6)",
+                    width: progress.totalPages > 1
+                      ? `${(progress.currentPage / progress.totalPages) * 100}%`
+                      : "60%",
+                    transition: "width 500ms ease",
+                    animation: progress.totalPages === 1 ? "pulse 2s ease-in-out infinite" : undefined,
+                  }}
+                />
+              </div>
+            </div>
+            {location !== "/extract" && (
+              <span className="text-[10px] text-purple-400/70 font-medium whitespace-nowrap">
+                اضغط للعودة
+              </span>
+            )}
+            <button
+              onClick={(e) => { e.stopPropagation(); cancelExtraction(); }}
+              className="p-1 rounded-md hover:bg-red-500/15 text-muted-foreground/50 hover:text-red-400 transition-colors"
+              title="إلغاء الاستخراج"
+            >
+              <XIcon className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        )}
+
+        {progress.status === "done" && location !== "/extract" && (
+          <div
+            className="flex items-center gap-3 px-5 py-2.5 border-b cursor-pointer select-none"
+            style={{
+              background: "linear-gradient(90deg, rgba(16,185,129,0.08), rgba(59,130,246,0.06))",
+              borderColor: "rgba(16,185,129,0.2)",
+            }}
+            onClick={() => setLocation("/extract")}
+          >
+            <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+            <p className="flex-1 text-xs font-semibold text-emerald-300">
+              ✓ اكتمل الاستخراج — اضغط لعرض النتائج وحفظ الفاتورة
+            </p>
+            <button
+              onClick={(e) => { e.stopPropagation(); dismissCompletion(); }}
+              className="p-1 rounded-md hover:bg-muted text-muted-foreground/40 hover:text-muted-foreground transition-colors"
+            >
+              <XIcon className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        )}
+
+        {progress.status === "error" && (
+          <div
+            className="flex items-center gap-3 px-5 py-2.5 border-b select-none"
+            style={{
+              background: "rgba(239,68,68,0.06)",
+              borderColor: "rgba(239,68,68,0.2)",
+            }}
+          >
+            <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
+            <p className="flex-1 text-xs font-medium text-red-300 truncate">
+              فشل الاستخراج: {progress.errorMessage || "خطأ غير معروف"}
+            </p>
+            <button
+              onClick={dismissCompletion}
+              className="p-1 rounded-md hover:bg-red-500/15 text-muted-foreground/40 hover:text-red-400 transition-colors"
+            >
+              <XIcon className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        )}
 
         {/* المحتوى */}
         <div className="flex-1 overflow-auto">

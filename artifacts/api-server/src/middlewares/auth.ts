@@ -41,7 +41,11 @@ export function verifyToken(token: string): AuthPayload | null {
 /** Middleware: يطلب تسجيل دخول */
 export function requireAuth(req: Request, res: Response, next: NextFunction): void {
   const authHeader = req.headers["authorization"];
-  const token = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : null;
+  let token = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : null;
+
+  if (!token && req.query.token && typeof req.query.token === "string") {
+    token = req.query.token;
+  }
 
   if (!token) {
     res.status(401).json({ error: "يجب تسجيل الدخول أولاً" });
@@ -52,6 +56,19 @@ export function requireAuth(req: Request, res: Response, next: NextFunction): vo
   if (!payload) {
     res.status(401).json({ error: "انتهت صلاحية الجلسة، يرجى تسجيل الدخول مجدداً" });
     return;
+  }
+
+  // السماح لمدير المنصة بانتحال صفة مؤسسة أخرى (Impersonation)
+  if (payload.role === "superadmin") {
+    const overrideOrgId = req.headers["x-ruknauto-org-id"];
+    if (overrideOrgId && typeof overrideOrgId === "string") {
+      const parsedId = parseInt(overrideOrgId, 10);
+      if (!isNaN(parsedId)) {
+        payload.orgId = parsedId;
+        payload.role = "admin"; // تصغير الصلاحية مؤقتاً لتطبيق فلاتر الـ Admin
+        payload.canEditParts = true;
+      }
+    }
   }
 
   req.user = payload;

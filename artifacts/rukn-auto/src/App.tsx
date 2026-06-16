@@ -8,6 +8,7 @@ import { setAuthTokenGetter } from "@workspace/api-client-react";
 
 import { Layout, ThemeProvider } from "@/components/layout";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
+import { ExtractionProvider } from "@/contexts/ExtractionContext";
 import Dashboard from "@/pages/dashboard";
 import Extract from "@/pages/extract";
 import Invoices from "@/pages/invoices";
@@ -75,7 +76,7 @@ function Router() {
           {isAdmin ? <AdminUsers /> : <Redirect to="/" />}
         </Route>
         <Route path="/admin/settings">
-          {isAdmin ? <AdminSettings /> : <Redirect to="/" />}
+          {isSuperAdmin ? <AdminSettings /> : <Redirect to="/" />}
         </Route>
         <Route path="/analytics" component={Analytics} />
         {/* super admin — مدير المنصة */}
@@ -95,7 +96,9 @@ function App() {
         <QueryClientProvider client={queryClient}>
           <TooltipProvider>
             <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
-              <Router />
+              <ExtractionProvider>
+                <Router />
+              </ExtractionProvider>
             </WouterRouter>
             <Toaster dir="rtl" />
           </TooltipProvider>

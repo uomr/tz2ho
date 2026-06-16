@@ -1,5 +1,5 @@
-import { useState, useRef } from "react";
-import { useExtractInvoice, useSaveInvoice, useDeleteInvoice, getListInvoicesQueryKey } from "@workspace/api-client-react";
+import { useRef, useState } from "react";
+import { useSaveInvoice, useDeleteInvoice, getListInvoicesQueryKey } from "@workspace/api-client-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,26 +7,31 @@ import { UploadCloud, CheckCircle2, Save, Loader2, FileText, ScanLine, Trash2, P
 import { toast } from "sonner";
 import { useLocation } from "wouter";
 import { useQueryClient } from "@tanstack/react-query";
-
-interface PageImage {
-  file: File;
-  preview: string;
-}
+import { useExtraction } from "@/contexts/ExtractionContext";
 
 export default function Extract() {
-  const [pages, setPages] = useState<PageImage[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const page2InputRef = useRef<HTMLInputElement>(null);
   const [, setLocation] = useLocation();
   const queryClient = useQueryClient();
-  const [isExtracting, setIsExtracting] = useState(false);
   const [duplicateWarning, setDuplicateWarning] = useState<string | null>(null);
 
-  const extractInvoice = useExtractInvoice();
+  // ── سياق الاستخراج العالمي ──
+  const {
+    pages,
+    setPages,
+    progress,
+    extractedData,
+    setExtractedData,
+    startExtraction,
+    cancelExtraction,
+    resetAll,
+  } = useExtraction();
+
   const saveInvoice = useSaveInvoice();
   const deleteInvoice = useDeleteInvoice();
 
-  const [extractedData, setExtractedData] = useState<any | null>(null);
+  const isExtracting = progress.status === "extracting";
 
   // ─── helpers ──────────────────────────────────────────────────────────────
 
@@ -62,69 +67,7 @@ export default function Extract() {
     setExtractedData(null);
   };
 
-  // ─── extract ──────────────────────────────────────────────────────────────
-
-  const extractOne = (preview: string, file: File): Promise<any> =>
-    new Promise((resolve, reject) => {
-      const base64 = preview.split(",")[1];
-      const mimeMatch = preview.match(/^data:(image\/[a-z+]+);base64,/);
-      const mimeType = mimeMatch ? mimeMatch[1] : file.type || "image/jpeg";
-      extractInvoice.mutate(
-        { data: { imageBase64: base64, mimeType } },
-        {
-          onSuccess: resolve,
-          onError: reject,
-        }
-      );
-    });
-
-  const handleExtract = async () => {
-    if (pages.length === 0) return;
-    setIsExtracting(true);
-
-    try {
-      if (pages.length === 1) {
-        // single page
-        const data = await extractOne(pages[0].preview, pages[0].file);
-        setExtractedData(data);
-        toast.success("تم استخراج البيانات بنجاح ✓");
-      } else {
-        // two pages — extract both then MERGE into one record (delete page2 invoice)
-        toast.info("جاري استخراج الصفحة الأولى…");
-        const page1 = await extractOne(pages[0].preview, pages[0].file);
-
-        toast.info("جاري استخراج الصفحة الثانية…");
-        const page2 = await extractOne(pages[1].preview, pages[1].file);
-
-        // Delete page2 invoice record — we only keep page1's record
-        if (page2?.invoiceId) {
-          try {
-            await new Promise<void>((res, rej) =>
-              deleteInvoice.mutate(
-                { id: page2.invoiceId },
-                { onSuccess: () => res(), onError: rej }
-              )
-            );
-          } catch {
-            // non-fatal — page2 record cleanup failed, proceed anyway
-          }
-        }
-
-        // merge: metadata from page 1, items from BOTH in order
-        const merged = {
-          ...page1,
-          items: [...(page1.items || []), ...(page2.items || [])],
-        };
-        setExtractedData(merged);
-        toast.success(`تم دمج ${merged.items.length} بند من صفحتين في فاتورة واحدة ✓`);
-      }
-    } catch (err: any) {
-      const msg = err?.response?.data?.error;
-      toast.error(msg || "فشل الاستخراج — تحقق من الاتصال أو أعد المحاولة");
-    } finally {
-      setIsExtracting(false);
-    }
-  };
+  // ─── save ─────────────────────────────────────────────────────────────────
 
   const handleDiscard = () => {
     if (!extractedData?.invoiceId) {
@@ -168,6 +111,7 @@ export default function Extract() {
         onSuccess: () => {
           toast.success("تم حفظ الفاتورة بنجاح");
           queryClient.invalidateQueries({ queryKey: getListInvoicesQueryKey() });
+          resetAll();
           setLocation("/invoices");
         },
         onError: (err: any) => {
@@ -321,7 +265,7 @@ export default function Extract() {
               {pages.length > 0 && (
                 <div className="space-y-3 pt-1">
                   {canExtract && (
-                    <Button className="w-full gap-2" size="lg" onClick={handleExtract}>
+                    <Button className="w-full gap-2" size="lg" onClick={startExtraction}>
                       <ScanLine className="w-4 h-4" />
                       {pages.length === 2
                         ? "استخراج الفاتورة (صفحتان)"
@@ -330,21 +274,34 @@ export default function Extract() {
                   )}
 
                   {isExtracting && (
-                    <Button className="w-full" size="lg" disabled>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      جاري الاستخراج…
-                    </Button>
+                    <div className="space-y-2">
+                      <Button className="w-full" size="lg" disabled>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        جاري استخراج الصفحة {progress.currentPage} من {progress.totalPages}…
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="w-full gap-2 text-red-400 border-red-500/30 hover:bg-red-500/10 hover:border-red-500/50"
+                        onClick={cancelExtraction}
+                      >
+                        <X className="w-3.5 h-3.5" />
+                        إلغاء الاستخراج
+                      </Button>
+                    </div>
                   )}
 
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="w-full gap-2 text-muted-foreground hover:text-red-400 hover:border-red-500/40 transition-colors"
-                    onClick={() => { setPages([]); setExtractedData(null); }}
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                    مسح الكل وبدء من جديد
-                  </Button>
+                  {!isExtracting && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full gap-2 text-muted-foreground hover:text-red-400 hover:border-red-500/40 transition-colors"
+                      onClick={resetAll}
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      مسح الكل وبدء من جديد
+                    </Button>
+                  )}
                 </div>
               )}
             </CardContent>

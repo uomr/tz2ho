@@ -1,6 +1,6 @@
 import { db } from "@workspace/db";
 import { partsTable } from "@workspace/db";
-import { ilike, eq, sql, isNotNull } from "drizzle-orm";
+import { ilike, eq, sql, isNotNull, and, or, isNull } from "drizzle-orm";
 import { logger } from "./logger";
 import { generateEmbedding, generateEmbeddingsBatch, cosineSimilarity } from "./embedding-service";
 
@@ -86,11 +86,11 @@ export interface PartMatch {
  * 3. Fuzzy fallback (Jaccard + Bigram) — للأوصاف بدون embedding
  * النتيجة الأعلى تفوز، مع دعم إضافي للقسم.
  */
-export async function lookupPartByDescription(description: string, userDept?: string): Promise<PartMatch | null> {
+export async function lookupPartByDescription(description: string, orgId: number, userDept?: string): Promise<PartMatch | null> {
   const normDesc = normalizeArabic(description);
   if (!normDesc) return null;
 
-  const allParts = await db.select().from(partsTable);
+  const allParts = await db.select().from(partsTable).where(or(eq(partsTable.orgId, orgId), isNull(partsTable.orgId)));
 
   // 1. تطابق تام
   for (const part of allParts) {
@@ -113,7 +113,11 @@ export async function lookupPartByDescription(description: string, userDept?: st
   let fuzzyBest: PartMatch | null = null;
 
   for (const part of allParts) {
-    const boost = calcDeptBoost(part.deptUsage as Record<string, number>, userDept);
+    let boost = calcDeptBoost(part.deptUsage as Record<string, number>, userDept);
+    // Add a boost for private memory to prioritize it over master catalog
+    if (part.orgId === orgId) {
+      boost += 0.05;
+    }
 
     // Vector score
     if (queryEmbedding && Array.isArray(part.embedding) && part.embedding.length > 0) {
@@ -165,11 +169,11 @@ export async function lookupPartByDescription(description: string, userDept?: st
   return best;
 }
 
-export async function lookupPartByOriginalPartNumber(originalPartNumber: string): Promise<PartMatch | null> {
+export async function lookupPartByOriginalPartNumber(originalPartNumber: string, orgId: number): Promise<PartMatch | null> {
   if (!originalPartNumber || originalPartNumber.trim().length < 2) return null;
   const rawPart = originalPartNumber.trim().toLowerCase();
 
-  const allParts = await db.select().from(partsTable);
+  const allParts = await db.select().from(partsTable).where(or(eq(partsTable.orgId, orgId), isNull(partsTable.orgId)));
   for (const part of allParts) {
     const storedOrig = (part.originalPartNumber ?? "").trim().toLowerCase();
     const storedAppr = part.partNumber.trim().toLowerCase();
@@ -189,6 +193,7 @@ export async function lookupPartByOriginalPartNumber(originalPartNumber: string)
 
 export async function enrichItemsWithMemory<T extends { partNumber?: string | null; description: string }>(
   items: T[],
+  orgId: number,
   userDept?: string
 ): Promise<(T & {
   originalPartNumber?: string | null;
@@ -206,11 +211,11 @@ export async function enrichItemsWithMemory<T extends { partNumber?: string | nu
     let match: PartMatch | null = null;
 
     if (extPart) {
-      match = await lookupPartByOriginalPartNumber(extPart);
+      match = await lookupPartByOriginalPartNumber(extPart, orgId);
     }
 
     if (!match && desc) {
-      match = await lookupPartByDescription(desc, userDept);
+      match = await lookupPartByDescription(desc, orgId, userDept);
     }
 
     if (match) {
@@ -259,6 +264,7 @@ export async function learnFromSavedInvoice(
     description: string;
     packFactor?: number;
   }>,
+  orgId: number,
   userDept?: string
 ): Promise<void> {
   for (const item of items) {
@@ -271,7 +277,7 @@ export async function learnFromSavedInvoice(
       const existing = await db
         .select()
         .from(partsTable)
-        .where(ilike(partsTable.description, item.description))
+        .where(and(ilike(partsTable.description, item.description), eq(partsTable.orgId, orgId)))
         .limit(1);
 
       // توليد embedding للوصف الجديد
@@ -314,6 +320,7 @@ export async function learnFromSavedInvoice(
           packFactor: factor,
           usageCount: 1,
           deptUsage: userDept ? { [userDept]: 1 } : {},
+          orgId,
         };
 
         if (embedding) {

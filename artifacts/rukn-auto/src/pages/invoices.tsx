@@ -14,6 +14,7 @@ import {
   AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { StatusBadge } from "@/components/shared/StatusBadge";
+import { getAuthHeader } from "@/contexts/AuthContext";
 
 export default function Invoices() {
   const { data: invoices, isLoading } = useListInvoices({
@@ -94,7 +95,10 @@ export default function Invoices() {
   const handleOpenEdit = async (id: number) => {
     try {
       const baseUrl = import.meta.env.BASE_URL.replace(/\/$/, "");
-      const res = await fetch(`${baseUrl}/api/invoices/${id}`);
+      const token = localStorage.getItem("ruknauto_token");
+      const res = await fetch(`${baseUrl}/api/invoices/${id}`, {
+        headers: getAuthHeader(token),
+      });
       if (!res.ok) throw new Error("Failed to fetch");
       const data = await res.json();
       setEditInvoice(data);
@@ -110,9 +114,10 @@ export default function Invoices() {
     setIsSavingEdit(true);
     try {
       const baseUrl = import.meta.env.BASE_URL.replace(/\/$/, "");
+      const token = localStorage.getItem("ruknauto_token");
       const res = await fetch(`${baseUrl}/api/invoices/${editInvoice.id}/save`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...getAuthHeader(token) },
         body: JSON.stringify({
           invoiceNumber: editInvoice.invoiceNumber,
           supplier: editInvoice.supplier,
@@ -147,7 +152,10 @@ export default function Invoices() {
 
     try {
       const baseUrl = import.meta.env.BASE_URL.replace(/\/$/, "");
-      const res = await fetch(`${baseUrl}/api/invoices/${id}`);
+      const token = localStorage.getItem("ruknauto_token");
+      const res = await fetch(`${baseUrl}/api/invoices/${id}`, {
+        headers: getAuthHeader(token),
+      });
       if (!res.ok) throw new Error("Failed to fetch invoice details");
       const data = await res.json();
       setSelectedInvoice(data);
@@ -290,10 +298,12 @@ export default function Invoices() {
     if (selectedInvoice) {
       try {
         const baseUrl = import.meta.env.BASE_URL.replace(/\/$/, "");
+        const token = localStorage.getItem("ruknauto_token");
         await fetch(`${baseUrl}/api/invoices/${selectedInvoice.id}/save`, {
           method: "POST",
           headers: {
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
+            ...getAuthHeader(token)
           },
           body: JSON.stringify({
             invoiceNumber: selectedInvoice.invoiceNumber,
@@ -369,10 +379,12 @@ export default function Invoices() {
         effectiveEnd = parseInt(String(rangeEnd), 10) || 0;
       }
 
+      const token = localStorage.getItem("ruknauto_token");
       const response = await fetch(`${baseUrl}/api/invoices/${selectedInvoice.id}/inject`, {
         method: "POST",
         headers: {
-          "Content-Type": "application/json"
+          "Content-Type": "application/json",
+          ...getAuthHeader(token)
         },
         body: JSON.stringify({ items: itemsToInject, startRow: effectiveStart, endRow: effectiveEnd, speedMode })
       });
@@ -503,8 +515,10 @@ export default function Invoices() {
     if (!selectedInvoice) return;
     try {
       const baseUrl = import.meta.env.BASE_URL.replace(/\/$/, "");
+      const token = localStorage.getItem("ruknauto_token");
       const response = await fetch(`${baseUrl}/api/invoices/${selectedInvoice.id}/abort`, {
-        method: "POST"
+        method: "POST",
+        headers: { ...getAuthHeader(token) }
       });
       if (response.ok) {
         toast.success("تم إرسال أمر إيقاف عملية الحقن 🛑");
@@ -532,9 +546,10 @@ export default function Invoices() {
 
     try {
       const baseUrl = import.meta.env.BASE_URL.replace(/\/$/, "");
+      const token = localStorage.getItem("ruknauto_token");
       await fetch(`${baseUrl}/api/invoices/${selectedInvoice.id}/inject/respond`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...getAuthHeader(token) },
         body: JSON.stringify({ partNumber }),
       });
     } catch (err: any) {
@@ -569,7 +584,8 @@ export default function Invoices() {
   // ── تصدير فاتورة واحدة إلى Excel ──
   const exportExcel = (id: number, invoiceNumber?: string | null) => {
     const a = document.createElement("a");
-    a.href = `${BASE_URL}/api/invoices/${id}/export/excel`;
+    const token = localStorage.getItem("ruknauto_token");
+    a.href = `${BASE_URL}/api/invoices/${id}/export/excel${token ? `?token=${token}` : ""}`;
     a.download = `فاتورة-${invoiceNumber ?? id}.xlsx`;
     a.click();
     toast.success("جاري تنزيل ملف Excel...");
@@ -578,7 +594,8 @@ export default function Invoices() {
   // ── تصدير جميع الفواتير إلى Excel ──
   const exportAllExcel = () => {
     const a = document.createElement("a");
-    a.href = `${BASE_URL}/api/invoices/export/excel/all`;
+    const token = localStorage.getItem("ruknauto_token");
+    a.href = `${BASE_URL}/api/invoices/export/excel/all${token ? `?token=${token}` : ""}`;
     a.download = `تقرير-الفواتير.xlsx`;
     a.click();
     toast.success("جاري تنزيل تقرير Excel الشامل...");
@@ -587,7 +604,8 @@ export default function Invoices() {
   // ── طباعة / تصدير PDF لفاتورة ──
   const printPDF = async (id: number) => {
     try {
-      const res = await fetch(`${BASE_URL}/api/invoices/${id}`);
+      const token = localStorage.getItem("ruknauto_token");
+      const res = await fetch(`${BASE_URL}/api/invoices/${id}`, { headers: getAuthHeader(token) });
       if (!res.ok) throw new Error();
       const inv = await res.json();
 

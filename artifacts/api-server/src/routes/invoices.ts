@@ -9,7 +9,7 @@ const __apiDir = typeof __dirname !== "undefined"
   : path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 import { db } from "@workspace/db";
 import { invoicesTable, invoiceItemsTable, activityTable } from "@workspace/db";
-import { eq, desc, sql, inArray, and } from "drizzle-orm";
+import { eq, desc, sql, inArray, ne, and } from "drizzle-orm";
 import {
   ExtractInvoiceBody,
   SaveInvoiceBody,
@@ -43,7 +43,12 @@ router.get("/invoices", requireAuth, async (req, res): Promise<void> => {
       createdAt: invoicesTable.createdAt,
     })
     .from(invoicesTable)
-    .where(isSuperAdmin || orgId === null ? undefined : eq(invoicesTable.orgId, orgId))
+    .where(
+      and(
+        isSuperAdmin ? undefined : (orgId === null ? sql`1=0` : eq(invoicesTable.orgId, orgId)),
+        ne(invoicesTable.status, "pending")
+      )
+    )
     .orderBy(desc(invoicesTable.createdAt));
 
   if (invoices.length === 0) {
@@ -96,7 +101,7 @@ router.post("/invoices/extract", requireAuth, async (req, res): Promise<void> =>
   }
 
   // Enrich with parts memory
-  const enrichedItems = await enrichItemsWithMemory(extractedData.items);
+  const enrichedItems = await enrichItemsWithMemory(extractedData.items, req.user!.orgId!);
 
   // Create pending invoice record
   const totalAmount = enrichedItems.reduce((sum, item) => sum + (item.total ?? 0), 0);
@@ -185,9 +190,9 @@ router.get("/invoices/:id", requireAuth, async (req, res): Promise<void> => {
     .select()
     .from(invoicesTable)
     .where(
-      isSuperAdmin || orgId === null
-        ? eq(invoicesTable.id, params.data.id)
-        : and(eq(invoicesTable.id, params.data.id), eq(invoicesTable.orgId, orgId))
+        isSuperAdmin
+          ? eq(invoicesTable.id, params.data.id)
+          : and(eq(invoicesTable.id, params.data.id), orgId === null ? sql`1=0` : eq(invoicesTable.orgId, orgId))
     );
 
   if (!invoice) {
@@ -209,6 +214,32 @@ router.get("/invoices/:id", requireAuth, async (req, res): Promise<void> => {
   });
 });
 
+// ── تنظيف جميع الفواتير المعلقة للمستخدم الحالي ──
+// يُستدعى عند إلغاء الاستخراج لضمان عدم بقاء فواتير شبحية
+// ⚠️ يجب أن يكون قبل DELETE /invoices/:id حتى لا يطابق Express "cleanup-pending" كـ :id
+router.delete("/invoices/cleanup-pending", requireAuth, async (req, res): Promise<void> => {
+  const userId = req.user?.userId;
+  if (!userId) {
+    // إذا لم يكن هناك مستخدم، نحذف كل المعلقة (fallback)
+    const deleted = await db.delete(invoicesTable)
+      .where(eq(invoicesTable.status, "pending"))
+      .returning({ id: invoicesTable.id });
+    res.json({ deleted: deleted.length });
+    return;
+  }
+
+  const deleted = await db.delete(invoicesTable)
+    .where(
+      and(
+        eq(invoicesTable.status, "pending"),
+        eq(invoicesTable.createdBy, userId)
+      )
+    )
+    .returning({ id: invoicesTable.id });
+
+  res.json({ deleted: deleted.length });
+});
+
 router.delete("/invoices/:id", requireAuth, async (req, res): Promise<void> => {
   const raw = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
   const params = DeleteInvoiceParams.safeParse({ id: parseInt(raw, 10) });
@@ -221,9 +252,9 @@ router.delete("/invoices/:id", requireAuth, async (req, res): Promise<void> => {
   const orgId = req.user?.orgId ?? null;
 
   await db.delete(invoicesTable).where(
-    isSuperAdmin || orgId === null
+    isSuperAdmin
       ? eq(invoicesTable.id, params.data.id)
-      : and(eq(invoicesTable.id, params.data.id), eq(invoicesTable.orgId, orgId))
+      : and(eq(invoicesTable.id, params.data.id), orgId === null ? sql`1=0` : eq(invoicesTable.orgId, orgId))
   );
   res.sendStatus(204);
 });
@@ -313,7 +344,8 @@ router.post("/invoices/:id/save", requireAuth, async (req, res): Promise<void> =
       originalPartNumber: i.originalPartNumber ?? null,
       description: i.description,
       packFactor: i.packFactor ?? 1
-    }))
+    })),
+    req.user!.orgId!
   );
 
   // Log activity
@@ -430,7 +462,7 @@ router.post("/invoices/:id/inject", requireAuth, async (req, res): Promise<void>
                partNumber: parsed.corrected,
                originalPartNumber: oldPart,
                description: parsed.description,
-             }]).catch((err) => {
+             }], req.user!.orgId!).catch((err) => {
                req.log.error({ err, corrected: parsed.corrected }, "Failed to persist part correction");
              });
 
