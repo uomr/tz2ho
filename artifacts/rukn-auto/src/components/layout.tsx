@@ -149,20 +149,27 @@ export function Layout({ children }: { children: React.ReactNode }) {
       <Link href={href}>
         <span
           title={isCollapsed ? label : undefined}
-          className="relative flex items-center gap-3 px-3 py-2.5 rounded-xl cursor-pointer select-none transition-colors duration-150"
+          className="relative flex items-center gap-3 px-3 rounded-xl cursor-pointer select-none transition-all duration-150"
           style={{
-            background: active ? colors.dim : "transparent",
-            color: active ? colors.accent : "hsl(var(--sidebar-foreground)/0.50)",
+            height: "44px",
+            background: active
+              ? `${colors.accent}14`
+              : "transparent",
+            color: active
+              ? colors.accent
+              : "hsl(var(--sidebar-foreground)/0.45)",
           }}
+          onMouseEnter={e => { if (!active) e.currentTarget.style.background = "hsl(var(--sidebar-accent))"; }}
+          onMouseLeave={e => { if (!active) e.currentTarget.style.background = "transparent"; }}
         >
           {active && (
             <span
-              className="absolute top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-full"
+              className="absolute top-1/2 -translate-y-1/2 w-0.5 h-6 rounded-full"
               style={{ insetInlineEnd: 0, background: colors.accent }}
             />
           )}
-          <Icon className="w-5 h-5 shrink-0" />
-          <span className="text-sm font-medium" style={fade(!isCollapsed)}>{label}</span>
+          <Icon className="w-[18px] h-[18px] shrink-0" />
+          <span className="text-[13.5px] font-medium" style={fade(!isCollapsed)}>{label}</span>
         </span>
       </Link>
     );
@@ -337,30 +344,42 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <header
           className="flex items-center px-6 shrink-0 gap-4"
           style={{
-            height: "58px",
-            borderBottom: "1px solid hsl(var(--border))",
-            background: "hsl(var(--card)/0.65)",
-            backdropFilter: "blur(10px)",
+            height: "56px",
+            borderBottom: "1px solid hsl(var(--border)/0.6)",
+            background: "hsl(var(--background))",
           }}
         >
           {/* عنوان الصفحة */}
-          <h1 className="text-base font-bold text-foreground tracking-tight">
-            {pageTitle}
-          </h1>
+          <div className="flex items-center gap-2.5">
+            <span
+              className="w-1 h-5 rounded-full shrink-0"
+              style={{ background: colors.accent }}
+            />
+            <h1 className="text-[15px] font-bold text-foreground tracking-tight">
+              {pageTitle}
+            </h1>
+          </div>
 
           <div className="flex-1" />
 
           {/* المؤسسة */}
           {user?.orgName && (
-            <span className="hidden sm:flex items-center gap-1.5 text-xs text-muted-foreground/70 font-medium">
+            <span className="hidden sm:flex items-center gap-1.5 text-xs font-medium"
+              style={{ color: "hsl(var(--muted-foreground)/0.65)" }}>
               {isAdmin && <ShieldCheck className="w-3 h-3 shrink-0" style={{ color: colors.accent }} />}
               {user.orgName}
             </span>
           )}
 
           {/* مؤشر ERP */}
-          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-500/8 border border-emerald-500/15 text-emerald-500 dark:text-emerald-400/80">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold"
+            style={{
+              background: "hsl(142 55% 40% / 0.08)",
+              border: "1px solid hsl(142 55% 40% / 0.18)",
+              color: "hsl(142 55% 42%)",
+            }}>
+            <span className="status-live w-1.5 h-1.5 rounded-full shrink-0"
+              style={{ background: "hsl(142 55% 42%)" }} />
             <span className="hidden md:block">ERP</span>
           </div>
         </header>
@@ -475,7 +494,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
         {/* المحتوى */}
         <div className="flex-1 overflow-auto">
-          <div className="p-7 max-w-7xl mx-auto">{children}</div>
+          <div className="p-6 max-w-[1400px] mx-auto fade-in">{children}</div>
         </div>
       </main>
 

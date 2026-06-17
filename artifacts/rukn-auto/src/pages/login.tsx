@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { ScanLine, LogIn, Eye, EyeOff, Zap, Brain, ArrowLeftRight } from "lucide-react";
+import { ScanLine, LogIn, Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
 
 const BASE_URL = import.meta.env.BASE_URL?.replace(/\/$/, "") || "";
@@ -23,11 +23,11 @@ export default function Login() {
         body: JSON.stringify({ username: username.trim(), password }),
       });
       const data = await res.json();
-      if (!res.ok) { toast.error(data.error || "حدث خطأ في تسجيل الدخول"); return; }
+      if (!res.ok) { toast.error(data.error || "بيانات غير صحيحة"); return; }
       login(data.token, data.user);
-      toast.success(`أهلاً ${data.user.displayName} 👋`);
+      toast.success(`أهلاً ${data.user.displayName}`);
     } catch {
-      toast.error("لا يمكن الاتصال بالخادم");
+      toast.error("تعذّر الاتصال بالخادم");
     } finally {
       setLoading(false);
     }
@@ -38,72 +38,76 @@ export default function Login() {
 
       {/* ══ اليمين — لوحة العلامة التجارية ══ */}
       <div
-        className="hidden lg:flex lg:w-1/2 relative flex-col justify-between p-14 overflow-hidden"
-        style={{
-          background: "linear-gradient(160deg, hsl(222 38% 11%) 0%, hsl(222 30% 7%) 100%)",
-        }}
+        className="hidden lg:flex lg:w-[52%] relative flex-col justify-between p-16 overflow-hidden"
+        style={{ background: "hsl(215 42% 5%)" }}
       >
-        {/* خلفية شبكية هندسية */}
+        {/* نسيج خفيف — نقاط هندسية */}
         <div
-          className="absolute inset-0 pointer-events-none"
+          className="absolute inset-0 pointer-events-none opacity-[0.04]"
           style={{
-            backgroundImage: `
-              linear-gradient(hsl(222 20% 20% / 0.25) 1px, transparent 1px),
-              linear-gradient(90deg, hsl(222 20% 20% / 0.25) 1px, transparent 1px)
-            `,
-            backgroundSize: "48px 48px",
+            backgroundImage: `radial-gradient(circle, hsl(38 62% 52%) 1px, transparent 1px)`,
+            backgroundSize: "32px 32px",
           }}
         />
-        {/* ضوء في الزاوية */}
+        {/* ضوء ذهبي في الزاوية العلوية */}
         <div
-          className="absolute -top-32 -right-32 w-80 h-80 rounded-full pointer-events-none"
-          style={{ background: "radial-gradient(circle, hsl(160 84% 39% / 0.12) 0%, transparent 70%)" }}
+          className="absolute -top-40 -right-20 w-[500px] h-[500px] rounded-full pointer-events-none"
+          style={{ background: "radial-gradient(circle, hsl(38 62% 52% / 0.08) 0%, transparent 65%)" }}
         />
+        {/* ضوء أسفل اليسار */}
         <div
-          className="absolute bottom-0 left-0 w-64 h-64 rounded-full pointer-events-none"
-          style={{ background: "radial-gradient(circle, hsl(224 76% 55% / 0.08) 0%, transparent 70%)" }}
+          className="absolute bottom-0 -left-16 w-80 h-80 rounded-full pointer-events-none"
+          style={{ background: "radial-gradient(circle, hsl(214 60% 40% / 0.07) 0%, transparent 70%)" }}
         />
 
         {/* الشعار */}
         <div className="relative z-10 flex items-center gap-3">
           <div
-            className="w-10 h-10 rounded-2xl flex items-center justify-center border"
+            className="w-9 h-9 rounded-xl flex items-center justify-center"
             style={{
-              background: "hsl(160 84% 39% / 0.15)",
-              borderColor: "hsl(160 84% 39% / 0.3)",
+              background: "hsl(38 62% 52% / 0.12)",
+              border: "1px solid hsl(38 62% 52% / 0.25)",
             }}
           >
-            <ScanLine className="w-5 h-5 text-primary" />
+            <ScanLine className="w-4 h-4" style={{ color: "hsl(38 62% 52%)" }} />
           </div>
-          <span className="text-white font-bold text-lg tracking-tight">RuknAuto</span>
+          <span className="text-white font-bold text-base tracking-wide">RuknAuto</span>
         </div>
 
-        {/* المحتوى الرئيسي */}
-        <div className="relative z-10 space-y-8">
-          <div>
-            <h1 className="text-[36px] font-extrabold text-white leading-tight tracking-tight">
-              نظام استخراج<br />
-              <span className="text-primary">الفواتير الذكي</span>
+        {/* العنوان الرئيسي */}
+        <div className="relative z-10 space-y-6">
+          <div className="space-y-3">
+            <p
+              className="text-xs font-semibold tracking-[0.2em] uppercase"
+              style={{ color: "hsl(38 62% 52%)" }}
+            >
+              نظام إدارة المشتريات
+            </p>
+            <h1 className="text-[42px] font-black text-white leading-[1.1] tracking-tight">
+              من الورقة<br />
+              <span style={{ color: "hsl(38 62% 52%)" }}>إلى السجل.</span>
             </h1>
-            <p className="mt-4 text-base leading-relaxed" style={{ color: "hsl(210 18% 90% / 0.55)" }}>
-              حوّل فواتيرك العربية الورقية إلى بيانات رقمية دقيقة وأدخلها في ERP تلقائياً في ثوانٍ
+            <p className="text-base leading-relaxed font-light" style={{ color: "hsl(30 12% 70%)" }}>
+              استخراج بيانات الفواتير وحقنها في ERP بدقة تامة وبلا تدخل يدوي.
             </p>
           </div>
 
-          <div className="space-y-4">
+          {/* خط فاصل */}
+          <div
+            className="w-12 h-px"
+            style={{ background: "hsl(38 62% 52% / 0.4)" }}
+          />
+
+          {/* إحصاء بسيط — ثقيل وواثق */}
+          <div className="grid grid-cols-3 gap-6">
             {[
-              { icon: Brain,         text: "ذكاء اصطناعي متخصص في الفواتير العربية",    color: "#8b5cf6" },
-              { icon: ArrowLeftRight, text: "حقن تلقائي مباشر في NewPoint ERP",          color: "#3b82f6" },
-              { icon: Zap,           text: "ذاكرة تتعلم أرقام قطعك تلقائياً",           color: "#f59e0b" },
-            ].map(({ icon: Icon, text, color }) => (
-              <div key={text} className="flex items-center gap-4">
-                <div
-                  className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
-                  style={{ background: color + "18", border: `1px solid ${color}30` }}
-                >
-                  <Icon className="w-4 h-4" style={{ color }} />
-                </div>
-                <span className="text-sm" style={{ color: "hsl(210 18% 90% / 0.65)" }}>{text}</span>
+              { n: "٪٩٨", label: "دقة الاستخراج" },
+              { n: "٣ث",  label: "متوسط الفاتورة" },
+              { n: "∞",   label: "تعلّم مستمر" },
+            ].map(({ n, label }) => (
+              <div key={label}>
+                <p className="text-3xl font-black" style={{ color: "hsl(38 62% 52%)" }}>{n}</p>
+                <p className="text-xs mt-1 font-medium" style={{ color: "hsl(30 12% 55%)" }}>{label}</p>
               </div>
             ))}
           </div>
@@ -111,40 +115,44 @@ export default function Login() {
 
         {/* ذيل */}
         <div className="relative z-10">
-          <p className="text-xs" style={{ color: "hsl(210 18% 90% / 0.25)" }}>
-            نظام SaaS متعدد المستأجرين • مدعوم بـ Qwen VL • مشفّر بالكامل
+          <p className="text-xs" style={{ color: "hsl(30 12% 30%)" }}>
+            © {new Date().getFullYear()} RuknAuto
           </p>
         </div>
       </div>
 
-      {/* ══ اليسار — نموذج تسجيل الدخول ══ */}
+      {/* ══ اليسار — نموذج الدخول ══ */}
       <div className="flex-1 flex items-center justify-center p-8 bg-background">
-        <div className="w-full max-w-[360px]">
+        <div className="w-full max-w-[360px] fade-in">
 
           {/* شعار للشاشات الصغيرة */}
-          <div className="flex flex-col items-center mb-10 lg:hidden">
+          <div className="flex items-center gap-3 mb-10 lg:hidden">
             <div
-              className="w-12 h-12 rounded-2xl flex items-center justify-center border mb-4"
+              className="w-9 h-9 rounded-xl flex items-center justify-center"
               style={{
-                background: "hsl(160 84% 39% / 0.12)",
-                borderColor: "hsl(160 84% 39% / 0.25)",
+                background: "hsl(38 62% 52% / 0.12)",
+                border: "1px solid hsl(38 62% 52% / 0.25)",
               }}
             >
-              <ScanLine className="w-6 h-6 text-primary" />
+              <ScanLine className="w-4 h-4 text-primary" />
             </div>
-            <h1 className="text-xl font-bold">RuknAuto</h1>
+            <span className="font-bold text-base">RuknAuto</span>
           </div>
 
-          {/* عنوان النموذج */}
+          {/* العنوان */}
           <div className="mb-8">
-            <h2 className="text-2xl font-extrabold text-foreground tracking-tight">مرحباً بعودتك</h2>
-            <p className="text-sm text-muted-foreground mt-1.5">أدخل بياناتك للمتابعة إلى النظام</p>
+            <h2 className="text-2xl font-extrabold text-foreground tracking-tight">
+              تسجيل الدخول
+            </h2>
+            <p className="text-sm text-muted-foreground mt-1.5">
+              أدخل بياناتك للمتابعة
+            </p>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-5">
+          <form onSubmit={handleSubmit} className="space-y-4">
 
             {/* اسم المستخدم */}
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               <label className="text-sm font-semibold text-foreground">
                 اسم المستخدم
               </label>
@@ -154,7 +162,7 @@ export default function Login() {
                 value={username}
                 onChange={e => setUsername(e.target.value)}
                 placeholder="أدخل اسم المستخدم"
-                className="w-full h-11 px-4 rounded-xl bg-card border border-border text-sm text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary/40 transition-all"
+                className="field"
                 autoComplete="username"
                 autoFocus
                 disabled={loading}
@@ -162,7 +170,7 @@ export default function Login() {
             </div>
 
             {/* كلمة السر */}
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               <label className="text-sm font-semibold text-foreground">
                 كلمة السر
               </label>
@@ -172,15 +180,15 @@ export default function Login() {
                   type={showPass ? "text" : "password"}
                   value={password}
                   onChange={e => setPassword(e.target.value)}
-                  placeholder="أدخل كلمة السر"
-                  className="w-full h-11 px-4 pl-11 rounded-xl bg-card border border-border text-sm text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary/40 transition-all"
+                  placeholder="••••••••"
+                  className="field pl-11"
                   autoComplete="current-password"
                   disabled={loading}
                 />
                 <button
                   type="button"
                   onClick={() => setShowPass(s => !s)}
-                  className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground/40 hover:text-muted-foreground transition-colors"
+                  className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground/40 hover:text-muted-foreground transition-colors"
                   tabIndex={-1}
                 >
                   {showPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -193,18 +201,19 @@ export default function Login() {
               id="login-submit"
               type="submit"
               disabled={loading || !username.trim() || !password}
-              className="w-full h-12 rounded-xl bg-primary text-primary-foreground text-sm font-bold flex items-center justify-center gap-2.5 hover:bg-primary/90 disabled:opacity-45 disabled:cursor-not-allowed transition-all active:scale-[0.98] mt-2"
+              className="btn-primary w-full mt-2"
+              style={{ height: "48px" }}
             >
               {loading ? (
                 <span className="w-4 h-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
               ) : (
                 <LogIn className="w-4 h-4" />
               )}
-              {loading ? "جاري التحقق..." : "دخول إلى النظام"}
+              {loading ? "جارٍ التحقق..." : "دخول"}
             </button>
           </form>
 
-          <p className="text-center text-xs text-muted-foreground/35 mt-8 leading-relaxed">
+          <p className="text-center text-xs text-muted-foreground/35 mt-8">
             تواصل مع مسؤول النظام للحصول على بيانات الدخول
           </p>
         </div>

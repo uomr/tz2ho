@@ -707,138 +707,151 @@ export default function Invoices() {
 
   return (
     <div className="space-y-5" dir="rtl">
-      <div>
-        <h2 className="text-2xl font-bold tracking-tight">سجل الفواتير</h2>
-        <p className="text-muted-foreground text-sm mt-1">عرض وإدارة الفواتير المحفوظة وحقنها ببرنامج NewPoint ERP.</p>
-      </div>
 
       <div className="flex items-center gap-3">
         <div className="relative flex-1 max-w-sm">
-          <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
+          <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/50" />
+          <input
             placeholder="بحث برقم الفاتورة أو المورد..."
-            className="pr-10 h-10"
+            className="field pr-10"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
         </div>
         {filteredInvoices && (
-          <span className="text-xs text-muted-foreground shrink-0">
+          <span className="text-xs text-muted-foreground/60 font-mono shrink-0 tabular-nums">
             {filteredInvoices.length} فاتورة
           </span>
         )}
         <Button
           variant="outline"
           size="sm"
-          className="h-10 gap-1.5 text-xs shrink-0 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10"
+          className="h-10 gap-1.5 text-xs shrink-0"
+          style={{ borderColor: "hsl(142 55% 40% / 0.3)", color: "hsl(142 55% 42%)" }}
           onClick={exportAllExcel}
         >
           <FileSpreadsheet className="h-3.5 w-3.5" />
-          تقرير Excel شامل
+          Excel شامل
         </Button>
       </div>
 
-      <Card className="bg-card">
-        <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm text-right">
-              <thead className="bg-muted border-b border-border">
+      <div
+        className="rounded-xl border overflow-hidden"
+        style={{ borderColor: "hsl(var(--card-border))", background: "hsl(var(--card))" }}
+      >
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm text-right">
+            <thead style={{ background: "hsl(var(--muted)/0.5)", borderBottom: "1px solid hsl(var(--border))" }}>
+              <tr>
+                <th className="px-5 py-3 font-semibold text-[12px] text-muted-foreground text-right">رقم الفاتورة</th>
+                <th className="px-4 py-3 font-semibold text-[12px] text-muted-foreground text-right">المورد</th>
+                <th className="px-4 py-3 font-semibold text-[12px] text-muted-foreground text-right">التاريخ</th>
+                <th className="px-4 py-3 font-semibold text-[12px] text-muted-foreground text-center w-20">البنود</th>
+                <th className="px-4 py-3 font-semibold text-[12px] text-muted-foreground text-right">الإجمالي</th>
+                <th className="px-4 py-3 font-semibold text-[12px] text-muted-foreground text-right">الحالة</th>
+                <th className="px-4 py-3 font-semibold text-[12px] text-muted-foreground text-center w-36">إجراءات</th>
+              </tr>
+            </thead>
+            <tbody>
+              {isLoading ? (
+                Array(5).fill(0).map((_, i) => (
+                  <tr key={i}>
+                    {Array(7).fill(0).map((_, j) => (
+                      <td key={j} className="px-5 py-4"><Skeleton className="h-4 w-full" /></td>
+                    ))}
+                  </tr>
+                ))
+              ) : filteredInvoices?.length === 0 ? (
                 <tr>
-                  <th className="p-3 font-medium text-right">رقم الفاتورة</th>
-                  <th className="p-3 font-medium text-right">المورد</th>
-                  <th className="p-3 font-medium text-right">التاريخ</th>
-                  <th className="p-3 font-medium text-center w-20">البنود</th>
-                  <th className="p-3 font-medium text-right">الإجمالي</th>
-                  <th className="p-3 font-medium text-right">الحالة</th>
-                  <th className="p-3 font-medium text-center w-36">إجراءات</th>
+                  <td colSpan={7} className="py-16 text-center text-muted-foreground">
+                    <div className="flex flex-col items-center gap-2">
+                      <FileText className="w-10 h-10 opacity-15" />
+                      <p className="text-sm font-medium">{search ? "لا توجد نتائج للبحث" : "لا توجد فواتير بعد"}</p>
+                      <p className="text-xs opacity-50">{search ? "جرّب كلمة بحث أخرى" : "ابدأ باستخراج فاتورة جديدة"}</p>
+                    </div>
+                  </td>
                 </tr>
-              </thead>
-              <tbody className="divide-y divide-border">
-                {isLoading ? (
-                  Array(5).fill(0).map((_, i) => (
-                    <tr key={i}>
-                      {Array(7).fill(0).map((_, j) => (
-                        <td key={j} className="p-4"><Skeleton className="h-5 w-full" /></td>
-                      ))}
-                    </tr>
-                  ))
-                ) : filteredInvoices?.length === 0 ? (
-                  <tr>
-                    <td colSpan={7} className="p-10 text-center text-muted-foreground">
-                      <div className="flex flex-col items-center gap-2 opacity-60">
-                        <FileText className="w-8 h-8 opacity-40" />
-                        <p className="text-sm">لا توجد فواتير</p>
-                        <p className="text-xs">{search ? "جرّب كلمة بحث أخرى" : "ابدأ باستخراج فاتورة جديدة"}</p>
-                      </div>
-                    </td>
-                  </tr>
-                ) : filteredInvoices?.map((inv) => (
-                  <tr key={inv.id} className="hover:bg-muted/50 transition-colors">
-                    <td className="px-4 py-3.5 font-medium font-mono text-sm">{inv.invoiceNumber || '—'}</td>
-                    <td className="px-4 py-3.5">{inv.supplier || '—'}</td>
-                    <td className="px-4 py-3.5 text-muted-foreground text-xs">{inv.date || '—'}</td>
-                    <td className="px-4 py-3.5 text-center tabular-nums">{inv.itemCount || 0}</td>
-                    <td className="px-4 py-3.5 tabular-nums">{inv.totalAmount ? `${inv.totalAmount.toLocaleString('ar-SA', { minimumFractionDigits: 0, maximumFractionDigits: 1 })} ر.س` : '—'}</td>
-                    <td className="px-4 py-3.5">
-                      <StatusBadge status={inv.status} />
-                    </td>
-                    <td className="px-4 py-3.5">
-                      <div className="flex items-center justify-center gap-0.5">
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
-                          className="h-8 w-8 text-muted-foreground hover:text-foreground"
-                          onClick={() => handleOpenDetail(inv.id)}
-                          title="عرض التفاصيل"
-                        >
-                          <Eye className="h-3.5 w-3.5" />
-                        </Button>
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
-                          className="h-8 w-8 text-blue-400 hover:bg-blue-500/10 hover:text-blue-300"
-                          onClick={() => handleOpenEdit(inv.id)}
-                          title="تعديل الفاتورة"
-                        >
-                          <Pencil className="h-3.5 w-3.5" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-emerald-400 hover:bg-emerald-500/10 hover:text-emerald-300"
-                          onClick={() => exportExcel(inv.id, inv.invoiceNumber)}
-                          title="تصدير Excel"
-                        >
-                          <FileDown className="h-3.5 w-3.5" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-violet-400 hover:bg-violet-500/10 hover:text-violet-300"
-                          onClick={() => printPDF(inv.id)}
-                          title="طباعة / تصدير PDF"
-                        >
-                          <Printer className="h-3.5 w-3.5" />
-                        </Button>
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
-                          className="h-8 w-8 text-destructive hover:bg-destructive/10 hover:text-destructive"
-                          onClick={() => handleDelete(inv.id)}
-                          disabled={deleteInvoice.isPending}
-                          title="حذف الفاتورة"
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </CardContent>
-      </Card>
+              ) : filteredInvoices?.map((inv) => (
+                <tr key={inv.id}
+                  className="transition-colors"
+                  style={{ height: "52px" }}
+                  onMouseEnter={e => (e.currentTarget.style.background = "hsl(var(--muted)/0.4)")}
+                  onMouseLeave={e => (e.currentTarget.style.background = "")}
+                >
+                  <td className="px-5 py-3 font-mono font-semibold text-[13px]" style={{ color: "hsl(38 62% 52%)" }}>
+                    {inv.invoiceNumber || <span className="text-muted-foreground/40">—</span>}
+                  </td>
+                  <td className="px-4 py-3 text-[13px] font-medium">{inv.supplier || '—'}</td>
+                  <td className="px-4 py-3 font-mono text-[12px] text-muted-foreground/70">{inv.date || '—'}</td>
+                  <td className="px-4 py-3 text-center font-mono text-[13px] font-semibold tabular-nums">{inv.itemCount || 0}</td>
+                  <td className="px-4 py-3 font-mono text-[13px] font-semibold tabular-nums">
+                    {inv.totalAmount
+                      ? `${inv.totalAmount.toLocaleString('ar-SA', { minimumFractionDigits: 0, maximumFractionDigits: 1 })} ر.س`
+                      : <span className="text-muted-foreground/40">—</span>
+                    }
+                  </td>
+                  <td className="px-4 py-3">
+                    <StatusBadge status={inv.status} />
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center justify-center gap-0.5">
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                        onClick={() => handleOpenDetail(inv.id)}
+                        title="عرض التفاصيل"
+                      >
+                        <Eye className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="h-8 w-8"
+                        style={{ color: "#3b82f6" }}
+                        onClick={() => handleOpenEdit(inv.id)}
+                        title="تعديل الفاتورة"
+                      >
+                        <Pencil className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
+                        style={{ color: "hsl(142 55% 42%)" }}
+                        onClick={() => exportExcel(inv.id, inv.invoiceNumber)}
+                        title="تصدير Excel"
+                      >
+                        <FileDown className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
+                        style={{ color: "hsl(271 55% 60%)" }}
+                        onClick={() => printPDF(inv.id)}
+                        title="طباعة / PDF"
+                      >
+                        <Printer className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="h-8 w-8 text-destructive hover:bg-destructive/10"
+                        onClick={() => handleDelete(inv.id)}
+                        disabled={deleteInvoice.isPending}
+                        title="حذف"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
 
       <Dialog open={isDetailOpen} onOpenChange={setIsDetailOpen}>
         <DialogContent

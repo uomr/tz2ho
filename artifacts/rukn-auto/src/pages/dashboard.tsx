@@ -1,5 +1,5 @@
 import { useGetStats, getGetStatsQueryKey } from "@workspace/api-client-react";
-import { FileText, Database, ScanLine, Activity, TrendingUp, Upload, AlertCircle, ChevronLeft, Zap, BarChart3, Users, Eye, RefreshCw } from "lucide-react";
+import { FileText, Database, ScanLine, Zap, BarChart3, Upload, Users, ChevronLeft, Activity, TrendingUp, Eye } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Link } from "wouter";
 import { useAuth } from "@/contexts/AuthContext";
@@ -10,29 +10,31 @@ export default function Dashboard() {
   });
   const { user, isAdmin } = useAuth();
 
-  const colors = isAdmin
-    ? { accent: "#8b5cf6", dim: "#8b5cf615", border: "#8b5cf630", gradient: "linear-gradient(135deg,#8b5cf6,#6d28d9)" }
-    : { accent: "#10b981", dim: "#10b98115", border: "#10b98130", gradient: "linear-gradient(135deg,#10b981,#059669)" };
+  const accentColor = isAdmin ? "hsl(271 55% 60%)" : "hsl(142 55% 42%)";
 
   const greeting = getGreeting();
   const displayName = user?.displayName || "مستخدم";
 
   return (
-    <div className="space-y-5" dir="rtl">
+    <div className="space-y-6" dir="rtl">
+
       {/* ── ترحيب ── */}
-      <div className="flex items-start justify-between">
+      <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight">
-            {greeting}، {displayName} 👋
-          </h2>
-          <p className="text-muted-foreground text-sm mt-1">
-            {isAdmin ? "نظرة شاملة على أداء النظام والفرق" : "نظرة عامة على نشاط استخراج الفواتير"}
+          <p className="text-xs font-semibold tracking-[0.15em] uppercase text-muted-foreground mb-1">
+            {new Date().toLocaleDateString("ar-SA", { weekday: "long", day: "numeric", month: "long" })}
           </p>
+          <h2 className="text-[22px] font-extrabold tracking-tight">
+            {greeting}، <span style={{ color: accentColor }}>{displayName}</span>
+          </h2>
         </div>
         <Link href="/extract">
           <button
-            className="flex items-center gap-2 px-4 py-2 rounded-xl text-[13px] font-semibold text-white transition-all hover:opacity-90"
-            style={{ background: colors.gradient, boxShadow: `0 0 16px ${colors.dim}` }}
+            className="flex items-center gap-2 px-4 h-10 rounded-xl text-[13px] font-bold transition-all hover:opacity-85 active:scale-[.98]"
+            style={{
+              background: "hsl(var(--primary))",
+              color: "hsl(var(--primary-foreground))",
+            }}
           >
             <ScanLine className="w-4 h-4" />
             استخراج جديد
@@ -40,95 +42,105 @@ export default function Dashboard() {
         </Link>
       </div>
 
-      {/* ── بطاقات الإحصاء ── */}
+      {/* ── بطاقات الإحصاء الأربع ── */}
       <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
         <StatCard
-          title="إجمالي الفواتير"
+          title="الفواتير"
           value={stats?.totalInvoices}
           icon={FileText}
           isLoading={isLoading}
           color="#3b82f6"
-          sub="منذ بداية التشغيل"
+          label="إجمالي"
         />
         <StatCard
-          title="القطع بالذاكرة"
+          title="ذاكرة القطع"
           value={stats?.totalParts}
           icon={Database}
           isLoading={isLoading}
-          color="#8b5cf6"
-          sub="متاحة للتعرف التلقائي"
+          color="hsl(271 55% 60%)"
+          label="قطعة محفوظة"
         />
         <StatCard
-          title="البنود المستخرجة"
+          title="البنود"
           value={stats?.totalItemsExtracted}
           icon={Zap}
           isLoading={isLoading}
-          color={colors.accent}
-          sub="بدقة ذكاء اصطناعي"
+          color={accentColor}
+          label="بند مستخرج"
         />
         <StatCard
-          title="نسبة النجاح"
+          title="النجاح"
           value={stats?.successRate != null ? `${stats.successRate}%` : undefined}
           icon={BarChart3}
           isLoading={isLoading}
-          color="#f59e0b"
-          sub="من آخر الفواتير"
+          color="hsl(38 62% 52%)"
+          label="نسبة الدقة"
           isPercent
         />
       </div>
 
+      {/* ── المحتوى الرئيسي ── */}
       <div className="grid gap-4 lg:grid-cols-3">
-        {/* ── إجراءات سريعة ── */}
-        <div className="space-y-2.5">
-          <p className="text-xs font-semibold text-muted-foreground/70 uppercase tracking-widest px-0.5">
+
+        {/* الإجراءات السريعة */}
+        <div className="space-y-2">
+          <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-muted-foreground/60 mb-3">
             الإجراءات السريعة
           </p>
           <QuickAction
             href="/extract"
             icon={Upload}
             label="استخراج فاتورة"
-            desc="رفع صورة وتحليلها بالذكاء الاصطناعي"
-            color={colors.accent}
+            desc="رفع صورة وتحليلها"
+            color={accentColor}
             primary
           />
           <QuickAction
             href="/invoices"
             icon={FileText}
             label="سجل الفواتير"
-            desc="عرض وحقن الفواتير في NewPoint ERP"
+            desc="عرض وحقن الفواتير"
             color="#3b82f6"
           />
           <QuickAction
             href="/parts"
             icon={Database}
             label="ذاكرة القطع"
-            desc="إدارة قاعدة أرقام القطع"
-            color="#8b5cf6"
+            desc="إدارة قاعدة القطع"
+            color="hsl(271 55% 60%)"
           />
           {isAdmin && (
             <QuickAction
               href="/admin/users"
               icon={Users}
-              label="إدارة المستخدمين"
-              desc="صلاحيات الموظفين والأدوار"
-              color="#f59e0b"
+              label="المستخدمون"
+              desc="صلاحيات وأدوار الفريق"
+              color="hsl(38 62% 52%)"
             />
           )}
         </div>
 
-        {/* ── النشاط الأخير ── */}
+        {/* النشاط الأخير */}
         <div
-          className="lg:col-span-2 rounded-2xl p-4"
-          style={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))" }}
+          className="lg:col-span-2 rounded-xl p-5"
+          style={{
+            background: "hsl(var(--card))",
+            border: "1px solid hsl(var(--card-border))",
+          }}
         >
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
-              <Activity className="w-4 h-4 text-muted-foreground" />
-              <span className="text-[13px] font-semibold">النشاط الأخير</span>
+              <Activity className="w-4 h-4 text-muted-foreground/50" />
+              <span className="text-[13px] font-bold">النشاط الأخير</span>
             </div>
             <Link href="/invoices">
-              <span className="flex items-center gap-1 text-[11px] px-2.5 py-1 rounded-full cursor-pointer transition-colors hover:opacity-80"
-                style={{ color: colors.accent, background: colors.dim }}>
+              <span
+                className="flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1 rounded-lg cursor-pointer transition-opacity hover:opacity-70"
+                style={{
+                  color: accentColor,
+                  background: accentColor + "12",
+                }}
+              >
                 <Eye className="w-3 h-3" />
                 عرض الكل
               </span>
@@ -136,27 +148,33 @@ export default function Dashboard() {
           </div>
 
           {isLoading ? (
-            <div className="space-y-3">
+            <div className="space-y-4">
               {[1, 2, 3, 4].map(i => (
                 <div key={i} className="flex items-center gap-3">
-                  <Skeleton className="w-2 h-2 rounded-full shrink-0" />
-                  <Skeleton className="h-4 flex-1" />
-                  <Skeleton className="h-3 w-16" />
+                  <Skeleton className="w-8 h-8 rounded-lg shrink-0" />
+                  <div className="flex-1 space-y-1.5">
+                    <Skeleton className="h-3.5 w-3/4" />
+                    <Skeleton className="h-3 w-1/3" />
+                  </div>
                 </div>
               ))}
             </div>
           ) : stats?.recentActivity && stats.recentActivity.length > 0 ? (
-            <div>
+            <div className="space-y-1">
               {stats.recentActivity.map((activity, idx) => (
                 <div
                   key={activity.id}
-                  className="flex items-start gap-3 py-3"
-                  style={{ borderBottom: idx < stats.recentActivity.length - 1 ? "1px solid hsl(var(--border) / 0.4)" : "none" }}
+                  className="flex items-center gap-3 py-2.5 transition-colors rounded-lg px-2 hover:bg-muted/40"
+                  style={{
+                    borderBottom: idx < stats.recentActivity.length - 1
+                      ? "1px solid hsl(var(--border)/0.4)"
+                      : "none",
+                  }}
                 >
-                  <div className="w-1.5 h-1.5 rounded-full mt-1.5 shrink-0" style={{ background: colors.accent }} />
+                  <ActivityIcon type={activity.type} />
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm leading-snug">{activity.description}</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">
+                    <p className="text-[13px] leading-snug truncate">{activity.description}</p>
+                    <p className="text-[11px] text-muted-foreground/55 mt-0.5 font-mono">
                       {new Date(activity.createdAt).toLocaleString("ar-SA", { dateStyle: "short", timeStyle: "short" })}
                     </p>
                   </div>
@@ -165,35 +183,14 @@ export default function Dashboard() {
               ))}
             </div>
           ) : (
-            <div className="text-center py-10 text-muted-foreground">
-              <Activity className="w-8 h-8 mx-auto mb-3 opacity-20" />
-              <p className="text-sm">لا يوجد نشاط حديث</p>
-              <p className="text-xs mt-1 opacity-60">ابدأ باستخراج فاتورة جديدة</p>
+            <div className="text-center py-12 text-muted-foreground">
+              <Activity className="w-10 h-10 mx-auto mb-3 opacity-15" />
+              <p className="text-sm font-medium">لا يوجد نشاط حديث</p>
+              <p className="text-xs mt-1 opacity-50">ابدأ باستخراج فاتورة جديدة</p>
             </div>
           )}
         </div>
       </div>
-
-      {/* ── بانر الفواتير المعلّقة ── */}
-      {!isLoading && stats && stats.totalInvoices > 0 && (
-        <div className="rounded-2xl p-4 flex items-center gap-4 bg-amber-500/5 border border-amber-500/20">
-          <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 bg-amber-500/15">
-            <AlertCircle className="w-5 h-5 text-amber-600 dark:text-amber-400" />
-          </div>
-          <div className="flex-1">
-            <p className="text-[13px] font-semibold">تحقق من سجل الفواتير</p>
-            <p className="text-[11px] text-muted-foreground mt-0.5">
-              قد تكون بعض الفواتير تنتظر الحقن في NewPoint ERP
-            </p>
-          </div>
-          <Link href="/invoices">
-            <button className="flex items-center gap-2 px-3.5 py-2 rounded-xl text-[12px] font-semibold transition-all hover:opacity-80 bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/30">
-              <RefreshCw className="w-3.5 h-3.5" />
-              مراجعة الآن
-            </button>
-          </Link>
-        </div>
-      )}
     </div>
   );
 }
@@ -208,34 +205,55 @@ function getGreeting(): string {
 }
 
 function StatCard({
-  title, value, icon: Icon, isLoading, color, sub, isPercent,
+  title, value, icon: Icon, isLoading, color, label, isPercent,
 }: {
-  title: string; value?: number | string; icon: any;
-  isLoading: boolean; color: string; sub: string; isPercent?: boolean;
+  title: string;
+  value?: number | string;
+  icon: any;
+  isLoading: boolean;
+  color: string;
+  label: string;
+  isPercent?: boolean;
 }) {
   return (
     <div
-      className="rounded-2xl p-4 flex flex-col gap-3"
-      style={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))" }}
+      className="rounded-xl p-5 flex flex-col gap-4 relative overflow-hidden"
+      style={{
+        background: "hsl(var(--card))",
+        border: "1px solid hsl(var(--card-border))",
+      }}
     >
-      <div className="flex items-start justify-between">
-        <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: color + "18" }}>
-          <Icon className="w-5 h-5" style={{ color }} />
+      {/* أيقونة خلفية */}
+      <Icon
+        className="absolute -left-2 -bottom-2 w-16 h-16 pointer-events-none"
+        style={{ color, opacity: 0.05 }}
+      />
+
+      <div className="flex items-center justify-between">
+        <div
+          className="w-9 h-9 rounded-lg flex items-center justify-center"
+          style={{ background: color + "18" }}
+        >
+          <Icon className="w-4 h-4" style={{ color }} />
         </div>
         {isPercent && !isLoading && value != null && (
-          <span className="flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">
+          <span className="flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded-md"
+            style={{ background: "hsl(142 55% 40% / 0.12)", color: "hsl(142 55% 42%)" }}>
             <TrendingUp className="w-2.5 h-2.5" />
             جيد
           </span>
         )}
       </div>
+
       <div>
         {isLoading
-          ? <Skeleton className="h-8 w-16 mt-1" />
-          : <p className="text-[28px] font-bold tabular-nums leading-none">{value ?? 0}</p>
+          ? <Skeleton className="h-9 w-20" />
+          : <p className="text-[32px] font-black tabular-nums leading-none font-mono" style={{ color }}>
+              {value ?? "—"}
+            </p>
         }
-        <p className="text-xs text-muted-foreground mt-1.5">{title}</p>
-        <p className="text-[11px] text-muted-foreground/50 mt-0.5">{sub}</p>
+        <p className="text-[12px] font-semibold text-foreground mt-2">{title}</p>
+        <p className="text-[11px] text-muted-foreground/50 mt-0.5">{label}</p>
       </div>
     </div>
   );
@@ -247,36 +265,57 @@ function QuickAction({ href, icon: Icon, label, desc, color, primary }: {
   return (
     <Link href={href}>
       <div
-        className="flex items-center gap-3.5 p-3.5 rounded-xl cursor-pointer transition-all duration-150 hover:scale-[1.01]"
+        className="flex items-center gap-3 p-3.5 rounded-xl cursor-pointer transition-all duration-150 hover:scale-[1.01] active:scale-[.99]"
         style={{
-          background: primary ? color + "12" : "hsl(var(--card))",
-          border: `1px solid ${primary ? color + "35" : "hsl(var(--border))"}`,
+          background: primary ? color + "10" : "hsl(var(--card))",
+          border: `1px solid ${primary ? color + "30" : "hsl(var(--card-border))"}`,
         }}
       >
-        <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0" style={{ background: color + "20" }}>
+        <div
+          className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0"
+          style={{ background: color + "18" }}
+        >
           <Icon className="w-4 h-4" style={{ color }} />
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold leading-none">{label}</p>
-          <p className="text-xs text-muted-foreground mt-1">{desc}</p>
+          <p className="text-[13px] font-bold leading-none">{label}</p>
+          <p className="text-[11px] text-muted-foreground/60 mt-1">{desc}</p>
         </div>
-        <ChevronLeft className="w-4 h-4 text-muted-foreground/30 shrink-0" />
+        <ChevronLeft className="w-3.5 h-3.5 text-muted-foreground/25 shrink-0" />
       </div>
     </Link>
   );
 }
 
+function ActivityIcon({ type }: { type: string }) {
+  const map: Record<string, { icon: any; color: string }> = {
+    extract: { icon: ScanLine,  color: "hsl(142 55% 42%)" },
+    save:    { icon: FileText,  color: "#3b82f6" },
+    inject:  { icon: Zap,       color: "hsl(271 55% 60%)" },
+  };
+  const b = map[type] ?? { icon: Activity, color: "#6b7280" };
+  const Icon = b.icon;
+  return (
+    <div
+      className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0"
+      style={{ background: b.color + "15" }}
+    >
+      <Icon className="w-3.5 h-3.5" style={{ color: b.color }} />
+    </div>
+  );
+}
+
 function ActivityBadge({ type }: { type: string }) {
   const map: Record<string, { label: string; color: string }> = {
-    extract: { label: "استخراج", color: "#10b981" },
+    extract: { label: "استخراج", color: "hsl(142 55% 42%)" },
     save:    { label: "حفظ",     color: "#3b82f6" },
-    inject:  { label: "حقن",     color: "#8b5cf6" },
+    inject:  { label: "حقن",     color: "hsl(271 55% 60%)" },
   };
   const b = map[type] ?? { label: type, color: "#6b7280" };
   return (
     <span
-      className="text-[11px] font-semibold px-2 py-0.5 rounded-full shrink-0"
-      style={{ background: b.color + "18", color: b.color }}
+      className="text-[10px] font-bold px-2 py-0.5 rounded-md shrink-0"
+      style={{ background: b.color + "15", color: b.color }}
     >
       {b.label}
     </span>

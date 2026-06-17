@@ -171,12 +171,6 @@ export default function Parts() {
 
   return (
     <div className="space-y-5" dir="rtl">
-      <div>
-        <h2 className="text-2xl font-bold tracking-tight">ذاكرة القطع</h2>
-        <p className="text-muted-foreground text-sm mt-1">
-          إدارة قاعدة بيانات القطع للتعرف التلقائي عليها مستقبلاً.
-        </p>
-      </div>
 
       {/* ── نموذج الإضافة ── */}
       <Card className="bg-card border-border">
@@ -291,8 +285,10 @@ export default function Parts() {
       </div>
 
       {/* ── الجدول ── */}
-      <Card className="bg-card">
-        <CardContent className="p-0">
+      <div
+        className="rounded-xl border overflow-hidden"
+        style={{ borderColor: "hsl(var(--card-border))", background: "hsl(var(--card))" }}
+      >
           <div className="overflow-x-auto">
             <table className="w-full text-sm text-right">
               <thead className="bg-muted border-b border-border">
@@ -331,51 +327,57 @@ export default function Parts() {
                   Array(6).fill(0).map((_, i) => (
                     <tr key={i}>
                       {Array(6).fill(0).map((_, j) => (
-                        <td key={j} className="p-4">
-                          <Skeleton className="h-5 w-full" />
-                        </td>
+                        <td key={j} className="px-5 py-4"><Skeleton className="h-4 w-full" /></td>
                       ))}
                     </tr>
                   ))
                 ) : paginated.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="p-10 text-center text-muted-foreground">
-                      <div className="flex flex-col items-center gap-2 opacity-60">
-                        <Database className="w-8 h-8 opacity-40" />
-                        <p className="text-sm">{search ? "لا توجد نتائج مطابقة" : "لا توجد قطع في الذاكرة"}</p>
-                        {!search && <p className="text-xs">أضف قطعة جديدة من الأعلى</p>}
+                    <td colSpan={6} className="py-16 text-center text-muted-foreground">
+                      <div className="flex flex-col items-center gap-2">
+                        <Database className="w-10 h-10 opacity-15" />
+                        <p className="text-sm font-medium">{search ? "لا توجد نتائج" : "لا توجد قطع في الذاكرة"}</p>
+                        {!search && <p className="text-xs opacity-50">أضف قطعة جديدة من الأعلى</p>}
                       </div>
                     </td>
                   </tr>
                 ) : (
                   paginated.map((part) => (
-                    <tr key={part.id} className="hover:bg-muted/30 transition-colors">
-                      <td className="px-4 py-3.5 font-mono text-sm font-semibold text-violet-600 dark:text-violet-300">
+                    <tr
+                      key={part.id}
+                      className="transition-colors"
+                      style={{ height: "52px" }}
+                      onMouseEnter={e => (e.currentTarget.style.background = "hsl(var(--muted)/0.4)")}
+                      onMouseLeave={e => (e.currentTarget.style.background = "")}
+                    >
+                      <td className="px-5 py-3 font-mono text-[13px] font-bold" style={{ color: "hsl(38 62% 52%)" }}>
                         {part.partNumber}
                       </td>
-                      <td className="px-4 py-3.5 font-mono text-xs text-muted-foreground">
+                      <td className="px-4 py-3 font-mono text-[12px] text-muted-foreground/60">
                         {part.originalPartNumber || "—"}
                       </td>
-                      <td className="px-4 py-3.5 text-sm">{part.description}</td>
-                      <td className="p-3 text-center">
+                      <td className="px-4 py-3 text-[13px]">{part.description}</td>
+                      <td className="px-4 py-3 text-center">
                         {part.packFactor && part.packFactor > 1 ? (
-                          <span className="px-2 py-0.5 bg-violet-500/10 border border-violet-500/20 text-violet-600 dark:text-violet-300 rounded-full text-xs font-semibold">
+                          <span className="px-2 py-0.5 rounded-md text-xs font-semibold"
+                            style={{ background: "hsl(271 55% 60% / 0.12)", color: "hsl(271 55% 60%)" }}>
                             {part.packFactor} حبة
                           </span>
                         ) : (
-                          <span className="text-muted-foreground/50 text-xs">—</span>
+                          <span className="text-muted-foreground/40 text-xs">—</span>
                         )}
                       </td>
-                      <td className="p-3 text-center">
+                      <td className="px-4 py-3 text-center">
                         {(part.usageCount ?? 0) > 0 ? (
-                          <span className="px-2 py-0.5 bg-primary/10 text-primary rounded-full text-xs font-semibold tabular-nums">
+                          <span className="px-2 py-0.5 rounded-md text-xs font-bold font-mono tabular-nums"
+                            style={{ background: "hsl(var(--primary)/0.12)", color: "hsl(var(--primary))" }}>
                             {part.usageCount}
                           </span>
                         ) : (
                           <span className="text-muted-foreground/40 text-xs">—</span>
                         )}
                       </td>
-                      <td className="p-3">
+                      <td className="px-4 py-3">
                         <div className="flex items-center justify-center gap-1">
                           <Button
                             variant="ghost"
@@ -389,7 +391,7 @@ export default function Parts() {
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-7 w-7 text-destructive/60 hover:bg-destructive/10 hover:text-destructive"
+                            className="h-7 w-7 text-destructive/50 hover:bg-destructive/10 hover:text-destructive"
                             onClick={() => handleDelete(part)}
                             disabled={deletePart.isPending}
                             title="حذف"
@@ -405,54 +407,38 @@ export default function Parts() {
             </table>
           </div>
 
-          {/* ── ترقيم الصفحات ── */}
+          {/* ترقيم الصفحات */}
           {totalPages > 1 && (
-            <div className="flex items-center justify-between px-4 py-3 border-t border-border bg-muted/20">
-              <Button
-                variant="ghost"
-                size="sm"
-                className="gap-1.5 h-8 text-xs"
-                onClick={() => setPage(p => Math.max(0, p - 1))}
-                disabled={page === 0}
-              >
-                <ChevronRight className="w-3.5 h-3.5" />
-                السابق
+            <div className="flex items-center justify-between px-5 py-3"
+              style={{ borderTop: "1px solid hsl(var(--border))", background: "hsl(var(--muted)/0.3)" }}>
+              <Button variant="ghost" size="sm" className="gap-1.5 h-8 text-xs"
+                onClick={() => setPage(p => Math.max(0, p - 1))} disabled={page === 0}>
+                <ChevronRight className="w-3.5 h-3.5" /> السابق
               </Button>
               <div className="flex items-center gap-1">
                 {Array.from({ length: Math.min(totalPages, 7) }, (_, i) => {
-                  const idx = totalPages <= 7 ? i : 
+                  const idx = totalPages <= 7 ? i :
                     page < 4 ? i :
                     page > totalPages - 5 ? totalPages - 7 + i :
                     page - 3 + i;
                   return (
-                    <button
-                      key={idx}
-                      onClick={() => setPage(idx)}
-                      className={`w-7 h-7 rounded text-xs font-medium transition-colors ${
-                        page === idx
-                          ? "bg-primary text-primary-foreground"
-                          : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                      }`}
-                    >
+                    <button key={idx} onClick={() => setPage(idx)}
+                      className="w-7 h-7 rounded-lg text-xs font-medium transition-colors"
+                      style={{
+                        background: page === idx ? "hsl(var(--primary))" : "transparent",
+                        color: page === idx ? "hsl(var(--primary-foreground))" : "hsl(var(--muted-foreground))",
+                      }}>
                       {idx + 1}
                     </button>
                   );
-                })}
-              </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="gap-1.5 h-8 text-xs"
-                onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))}
-                disabled={page >= totalPages - 1}
-              >
-                التالي
-                <ChevronLeft className="w-3.5 h-3.5" />
+                })}\n              </div>
+              <Button variant="ghost" size="sm" className="gap-1.5 h-8 text-xs"
+                onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))} disabled={page >= totalPages - 1}>
+                التالي <ChevronLeft className="w-3.5 h-3.5" />
               </Button>
             </div>
           )}
-        </CardContent>
-      </Card>
+        </div>
 
       {/* ── تأكيد الحذف ── */}
       <AlertDialog open={!!deleteTarget} onOpenChange={open => !open && setDeleteTarget(null)}>
