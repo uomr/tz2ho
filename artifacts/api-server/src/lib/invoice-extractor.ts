@@ -1,6 +1,7 @@
 import sharp from "sharp";
 import { logger } from "./logger";
 import { getActiveModel, recordUsage } from "../routes/admin-settings.js";
+import { AVAILABLE_MODELS } from "@workspace/db";
 
 // Compress + resize image server-side before sending to the Vision API.
 // Target: ≤1600px on the longest edge, JPEG q=85.
@@ -24,40 +25,44 @@ async function prepareImage(imageBase64: string, mimeType: string): Promise<{ ba
   }
 }
 
-// Concise, token-efficient prompt — forces JSON-only output with no preamble.
-// Uses few-shot example inline to anchor format without wasting tokens.
-const EXTRACTION_PROMPT = `Extract ALL table rows from this invoice image. Output ONLY valid JSON — no markdown, no explanation.
+// Prompt optimised for Arabic RTL auto-parts invoices.
+// Explicitly names each column in the order they appear right-to-left,
+// and gives concrete examples so the model does not swap columns.
+const EXTRACTION_PROMPT = `You are an Arabic invoice OCR expert. Extract ALL line-item rows from this invoice image and output ONLY valid JSON — no markdown, no explanation, no preamble.
 
-Schema:
+Output schema:
 {
-  "invoice_number": string,   // invoice/bill number, "" if not found
-  "supplier": string,         // vendor/company name, "" if not found
-  "date": string,             // YYYY-MM-DD, "" if not found
+  "invoice_number": string,
+  "supplier": string,
+  "date": string,
   "items": [
     {
-      "part_number": string,  // part/SKU code exactly as written, "" if missing
-      "description": string,  // item name/description exactly as written
-      "quantity": number,     // HOW MANY units — always a SMALL whole number (1–9999), NEVER a part code
-      "unit": string,         // pcs/حبة/ctn/ltr/etc., "" if missing
-      "unit_cost": number     // price per single unit
+      "part_number": string,
+      "description": string,
+      "quantity": number,
+      "unit": string,
+      "unit_cost": number
     }
   ]
 }
 
-CRITICAL RULES — read carefully:
-1. "quantity" (الكمية / عدد) is ALWAYS a small positive integer like 1, 2, 5, 10.
-   It is NEVER a long code such as "30210340" or "92600-3HD7A".
-   If you are unsure which column is quantity, pick the column with small numbers (1–999).
-2. "part_number" (رقم الصنف / رمز القطعة) is the SKU/code column — it often contains
-   hyphens or alphanumeric codes like "30210-3S4X0-PROMISE". Copy it EXACTLY.
-3. Arabic invoices are read RIGHT-TO-LEFT. The part-number column is usually the
-   rightmost column; quantity is typically toward the middle.
-4. "unit_cost" (السعر / سعر الوحدة) is the price of ONE unit — a decimal number.
-5. Copy part numbers and descriptions EXACTLY as printed (Arabic or English).
-6. Use Western digits (0-9) for all numbers.
-7. Do NOT skip any row — include every line item.
-8. Ignore stamps, signatures, QR codes, and totals rows.
-9. If part number column is absent, set part_number to "".`;
+Field definitions:
+- "part_number": The SKU / part code (رقم الصنف / رمز القطعة). This is an alphanumeric code that often contains hyphens, e.g. "92600-3HD7A-PROMISE" or "30210-3S4X0". Copy it EXACTLY as printed.
+- "description": The item name/description (اسم الصنف). Copy exactly in Arabic or English.
+- "quantity": How many units were purchased (الكمية / العدد). This is the COUNT column — a plain integer (e.g. 1, 2, 5). It is NEVER the part code and NEVER the price.
+- "unit": Unit of measure (الوحدة), e.g. حبة / pcs / كرتون. Empty string if absent.
+- "unit_cost": The price per single unit (السعر / سعر الوحدة). A decimal number.
+
+IMPORTANT — Arabic invoices read RIGHT-TO-LEFT. Typical column order from RIGHT to LEFT is:
+  رقم الصنف (part_number) | اسم الصنف (description) | الوحدة (unit) | الكمية (quantity) | السعر (unit_cost) | ...totals...
+
+Rules:
+- Map each table column to the correct field by reading its HEADER, not its position.
+- Use Western digits (0-9) for all numbers.
+- Do NOT skip any row — include every line item.
+- Ignore stamps, signatures, QR codes, and totals/summary rows.
+- date format: YYYY-MM-DD. Empty string if not found.
+- If part_number column is absent, set part_number to "".`;
 
 export interface ExtractedItem {
   partNumber: string;
@@ -95,16 +100,20 @@ function extractJson(text: string): string {
 // google/gemini-3.1-flash-lite: موثوق، يدعم JSON، متاح دائماً من Google
 const FALLBACK_MODEL = "google/gemini-3.1-flash-lite";
 
+/** Returns true if the model supports response_format: json_object */
+function modelSupportsJson(modelId: string): boolean {
+  const meta = AVAILABLE_MODELS.find((m) => m.id === modelId);
+  return meta?.supportsJson ?? false;
+}
+
 export async function extractInvoiceFromImage(
   imageBase64: string,
   mimeType: string,
   model?: string
 ): Promise<ExtractedInvoiceData> {
-  // إذا لم يُحدَّد النموذج صراحةً → اقرأه من قاعدة البيانات
   const activeModel = model ?? (await getActiveModel());
   return _doExtract(imageBase64, mimeType, activeModel);
 }
-
 
 async function _doExtract(
   imageBase64: string,
@@ -119,7 +128,36 @@ async function _doExtract(
   imageBase64 = base64;
   mimeType = mime;
 
-  logger.info({ model: activeModel, imageKb: Math.round(imageBase64.length * 0.75 / 1024) }, "Calling OpenRouter Vision API");
+  // Only send response_format if the model explicitly supports it.
+  // Sending it to Qwen models causes a 400 error and wastes a round-trip.
+  const useJsonFormat = modelSupportsJson(activeModel);
+
+  logger.info(
+    { model: activeModel, imageKb: Math.round(imageBase64.length * 0.75 / 1024), useJsonFormat },
+    "Calling OpenRouter Vision API"
+  );
+
+  const requestBody: Record<string, unknown> = {
+    model: activeModel,
+    messages: [
+      {
+        role: "user",
+        content: [
+          {
+            type: "image_url",
+            image_url: { url: `data:${mimeType};base64,${imageBase64}` },
+          },
+          { type: "text", text: EXTRACTION_PROMPT },
+        ],
+      },
+    ],
+    temperature: 0,
+    max_tokens: 8192,
+  };
+
+  if (useJsonFormat) {
+    requestBody.response_format = { type: "json_object" };
+  }
 
   const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
     method: "POST",
@@ -129,24 +167,7 @@ async function _doExtract(
       "HTTP-Referer": "https://ruknauto.app",
       "X-Title": "RuknAuto Invoice Extractor",
     },
-    body: JSON.stringify({
-      model: activeModel,
-      messages: [
-        {
-          role: "user",
-          content: [
-            {
-              type: "image_url",
-              image_url: { url: `data:${mimeType};base64,${imageBase64}` },
-            },
-            { type: "text", text: EXTRACTION_PROMPT },
-          ],
-        },
-      ],
-      temperature: 0,
-      max_tokens: 8192,
-      response_format: { type: "json_object" },
-    }),
+    body: JSON.stringify(requestBody),
     signal: AbortSignal.timeout(120_000),
   });
 
@@ -167,8 +188,10 @@ async function _doExtract(
         return _doExtract(imageBase64, mimeType, FALLBACK_MODEL);
       }
     }
+    // Unexpected response_format rejection — fall back to raw mode
     if (response.status === 400 && text.includes("response_format")) {
-      return extractInvoiceFromImageRaw(imageBase64, mimeType, activeModel, apiKey);
+      logger.warn({ model: activeModel }, "Unexpected response_format rejection, retrying without it");
+      return _doExtractRaw(imageBase64, mimeType, activeModel, apiKey);
     }
     throw new Error(`فشل الاتصال بـ OpenRouter (${response.status}): ${text.slice(0, 300)}`);
   }
@@ -180,7 +203,6 @@ async function _doExtract(
 
   if (!result.choices?.length) throw new Error("استجابة فارغة من OpenRouter");
 
-  // تسجيل الاستهلاك في الخلفية (لا نُوقف المستخدم)
   const tokIn = result.usage?.prompt_tokens ?? 0;
   const tokOut = result.usage?.completion_tokens ?? 0;
   recordUsage(tokIn, tokOut).catch(e => logger.warn({ e }, "recordUsage failed (non-critical)"));
@@ -188,8 +210,8 @@ async function _doExtract(
   return parseModelResponse(result.choices[0].message.content);
 }
 
-// Fallback: same call without response_format constraint (for older models)
-async function extractInvoiceFromImageRaw(
+// Raw mode: no response_format constraint (used for models that don't support it)
+async function _doExtractRaw(
   imageBase64: string,
   mimeType: string,
   model: string,
@@ -230,9 +252,15 @@ async function extractInvoiceFromImageRaw(
 
   const result = (await response.json()) as {
     choices?: Array<{ message: { content: string } }>;
+    usage?: { prompt_tokens?: number; completion_tokens?: number };
   };
 
   if (!result.choices?.length) throw new Error("استجابة فارغة من OpenRouter");
+
+  const tokIn = result.usage?.prompt_tokens ?? 0;
+  const tokOut = result.usage?.completion_tokens ?? 0;
+  recordUsage(tokIn, tokOut).catch(e => logger.warn({ e }, "recordUsage failed (non-critical)"));
+
   return parseModelResponse(result.choices[0].message.content);
 }
 
@@ -270,23 +298,8 @@ function parseModelResponse(content: string): ExtractedInvoiceData {
     .map((item) => {
       const partNumber = String(item.part_number ?? "").trim();
       const description = String(item.description ?? "").trim();
-      const rawQuantity = parseFloat(String(item.quantity ?? "0")) || 0;
+      const quantity = parseFloat(String(item.quantity ?? "0")) || 0;
       const unitCost = parseFloat(String(item.unit_cost ?? "0")) || 0;
-
-      // Sanity-check: quantity should be a small positive number.
-      // If the model confused the part-number column with quantity and returned
-      // a large code-like value (>9999) or a non-integer, flag it for manual review.
-      const QUANTITY_MAX = 9999;
-      const quantityLooksWrong = rawQuantity > QUANTITY_MAX || rawQuantity < 0 || !Number.isFinite(rawQuantity);
-      const quantity = quantityLooksWrong ? 0 : rawQuantity;
-
-      if (quantityLooksWrong) {
-        logger.warn(
-          { partNumber, rawQuantity },
-          "Suspicious quantity detected (possibly misread from part-number column) — reset to 0 and flagged for manual input"
-        );
-      }
-
       const total = Math.round(quantity * unitCost * 100) / 100;
       return {
         partNumber,
@@ -295,7 +308,7 @@ function parseModelResponse(content: string): ExtractedInvoiceData {
         unit: String(item.unit ?? "").trim(),
         unitCost,
         total,
-        needsManualInput: !partNumber || quantityLooksWrong,
+        needsManualInput: !partNumber,
         memoryMatch: false,
         memoryConfidence: null,
       };
