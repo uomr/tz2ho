@@ -37,19 +37,27 @@ Schema:
     {
       "part_number": string,  // part/SKU code exactly as written, "" if missing
       "description": string,  // item name/description exactly as written
-      "quantity": number,
-      "unit": string,         // pcs/ctn/ltr/etc., "" if missing
-      "unit_cost": number     // unit price
+      "quantity": number,     // HOW MANY units — always a SMALL whole number (1–9999), NEVER a part code
+      "unit": string,         // pcs/حبة/ctn/ltr/etc., "" if missing
+      "unit_cost": number     // price per single unit
     }
   ]
 }
 
-Rules:
-- Copy part numbers and descriptions EXACTLY as printed (Arabic or English)
-- Use Western digits (0-9) for all numbers
-- Do NOT skip any row — include every line item
-- Ignore stamps, signatures, QR codes, and totals rows
-- If part number column is absent, set part_number to ""`;
+CRITICAL RULES — read carefully:
+1. "quantity" (الكمية / عدد) is ALWAYS a small positive integer like 1, 2, 5, 10.
+   It is NEVER a long code such as "30210340" or "92600-3HD7A".
+   If you are unsure which column is quantity, pick the column with small numbers (1–999).
+2. "part_number" (رقم الصنف / رمز القطعة) is the SKU/code column — it often contains
+   hyphens or alphanumeric codes like "30210-3S4X0-PROMISE". Copy it EXACTLY.
+3. Arabic invoices are read RIGHT-TO-LEFT. The part-number column is usually the
+   rightmost column; quantity is typically toward the middle.
+4. "unit_cost" (السعر / سعر الوحدة) is the price of ONE unit — a decimal number.
+5. Copy part numbers and descriptions EXACTLY as printed (Arabic or English).
+6. Use Western digits (0-9) for all numbers.
+7. Do NOT skip any row — include every line item.
+8. Ignore stamps, signatures, QR codes, and totals rows.
+9. If part number column is absent, set part_number to "".`;
 
 export interface ExtractedItem {
   partNumber: string;
@@ -262,8 +270,23 @@ function parseModelResponse(content: string): ExtractedInvoiceData {
     .map((item) => {
       const partNumber = String(item.part_number ?? "").trim();
       const description = String(item.description ?? "").trim();
-      const quantity = parseFloat(String(item.quantity ?? "0")) || 0;
+      const rawQuantity = parseFloat(String(item.quantity ?? "0")) || 0;
       const unitCost = parseFloat(String(item.unit_cost ?? "0")) || 0;
+
+      // Sanity-check: quantity should be a small positive number.
+      // If the model confused the part-number column with quantity and returned
+      // a large code-like value (>9999) or a non-integer, flag it for manual review.
+      const QUANTITY_MAX = 9999;
+      const quantityLooksWrong = rawQuantity > QUANTITY_MAX || rawQuantity < 0 || !Number.isFinite(rawQuantity);
+      const quantity = quantityLooksWrong ? 0 : rawQuantity;
+
+      if (quantityLooksWrong) {
+        logger.warn(
+          { partNumber, rawQuantity },
+          "Suspicious quantity detected (possibly misread from part-number column) — reset to 0 and flagged for manual input"
+        );
+      }
+
       const total = Math.round(quantity * unitCost * 100) / 100;
       return {
         partNumber,
@@ -272,7 +295,7 @@ function parseModelResponse(content: string): ExtractedInvoiceData {
         unit: String(item.unit ?? "").trim(),
         unitCost,
         total,
-        needsManualInput: !partNumber,
+        needsManualInput: !partNumber || quantityLooksWrong,
         memoryMatch: false,
         memoryConfidence: null,
       };
