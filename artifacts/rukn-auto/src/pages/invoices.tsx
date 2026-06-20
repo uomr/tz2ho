@@ -2,7 +2,8 @@ import { useListInvoices, getListInvoicesQueryKey, useDeleteInvoice } from "@wor
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search, Trash2, Eye, Play, CheckCircle2, AlertCircle, Loader2, Sparkles, Terminal, FileText, Pencil, XCircle, SkipForward, FileDown, Printer, FileSpreadsheet } from "lucide-react";
+import { Search, Trash2, Eye, Play, CheckCircle2, AlertCircle, Loader2, Sparkles, Terminal, FileText, Pencil, XCircle, SkipForward, FileDown, Printer, FileSpreadsheet, MoreHorizontal } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useState, useRef, useEffect } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
@@ -794,53 +795,61 @@ export default function Invoices() {
                     <StatusBadge status={inv.status} />
                   </td>
                   <td className="px-4 py-3">
-                    <div className="flex items-center justify-center gap-0.5">
-                      <Button 
-                        variant="ghost" 
-                        size="icon" 
-                        className="h-7 w-7 text-muted-foreground hover:text-foreground hover:bg-muted/60 rounded-md transition-colors"
+                    <div className="flex items-center justify-center gap-1.5">
+                      {/* زر العرض — بارز لوحده */}
+                      <Button
+                        size="sm"
+                        className="h-7 px-3 gap-1.5 text-xs font-medium bg-primary/10 text-primary hover:bg-primary/20 border border-primary/20 hover:border-primary/40 rounded-md transition-colors"
                         onClick={() => handleOpenDetail(inv.id)}
-                        title="عرض التفاصيل"
                       >
                         <Eye className="h-3.5 w-3.5" />
+                        عرض
                       </Button>
-                      <Button 
-                        variant="ghost" 
-                        size="icon" 
-                        className="h-7 w-7 text-muted-foreground hover:text-foreground hover:bg-muted/60 rounded-md transition-colors"
-                        onClick={() => handleOpenEdit(inv.id)}
-                        title="تعديل الفاتورة"
-                      >
-                        <Pencil className="h-3.5 w-3.5" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7 text-muted-foreground hover:text-foreground hover:bg-muted/60 rounded-md transition-colors"
-                        onClick={() => exportExcel(inv.id, inv.invoiceNumber)}
-                        title="تصدير Excel"
-                      >
-                        <FileDown className="h-3.5 w-3.5" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7 text-muted-foreground hover:text-foreground hover:bg-muted/60 rounded-md transition-colors"
-                        onClick={() => printPDF(inv.id)}
-                        title="طباعة / PDF"
-                      >
-                        <Printer className="h-3.5 w-3.5" />
-                      </Button>
-                      <Button 
-                        variant="ghost" 
-                        size="icon" 
-                        className="h-7 w-7 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-md transition-colors"
-                        onClick={() => handleDelete(inv.id)}
-                        disabled={deleteInvoice.isPending}
-                        title="حذف"
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </Button>
+
+                      {/* القائمة المنسدلة — باقي الإجراءات */}
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 text-muted-foreground hover:text-foreground hover:bg-muted/60 rounded-md transition-colors"
+                          >
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-40 text-right" dir="rtl">
+                          <DropdownMenuItem
+                            className="gap-2 cursor-pointer"
+                            onClick={() => handleOpenEdit(inv.id)}
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                            تعديل
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            className="gap-2 cursor-pointer"
+                            onClick={() => exportExcel(inv.id, inv.invoiceNumber)}
+                          >
+                            <FileDown className="h-3.5 w-3.5" />
+                            تصدير Excel
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            className="gap-2 cursor-pointer"
+                            onClick={() => printPDF(inv.id)}
+                          >
+                            <Printer className="h-3.5 w-3.5" />
+                            طباعة / PDF
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            className="gap-2 cursor-pointer text-destructive focus:text-destructive focus:bg-destructive/10"
+                            onClick={() => handleDelete(inv.id)}
+                            disabled={deleteInvoice.isPending}
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                            حذف
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </div>
                   </td>
                 </tr>
