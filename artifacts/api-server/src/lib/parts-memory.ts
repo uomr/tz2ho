@@ -1,6 +1,6 @@
 import { db } from "@workspace/db";
 import { partsTable } from "@workspace/db";
-import { ilike, eq, sql, isNotNull, and, or, isNull } from "drizzle-orm";
+import { ilike, eq, sql, isNotNull, and, or, isNull, SQL } from "drizzle-orm";
 import { logger } from "./logger";
 import { generateEmbedding, generateEmbeddingsBatch, cosineSimilarity } from "./embedding-service";
 
@@ -274,10 +274,18 @@ export async function learnFromSavedInvoice(
     const factor = item.packFactor ?? 1;
 
     try {
+      // FIX: eq(col, null) generates "col = NULL" which NEVER matches in SQL.
+      // Must use isNull() when orgId is null, otherwise corrections are never
+      // found and always inserted as duplicates instead of being updated.
+      const orgFilter: SQL =
+        orgId === null
+          ? isNull(partsTable.orgId)
+          : eq(partsTable.orgId, orgId);
+
       const existing = await db
         .select()
         .from(partsTable)
-        .where(and(ilike(partsTable.description, item.description), eq(partsTable.orgId, orgId)))
+        .where(and(ilike(partsTable.description, item.description), orgFilter))
         .limit(1);
 
       // توليد embedding للوصف الجديد

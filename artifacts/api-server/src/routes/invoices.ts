@@ -343,7 +343,7 @@ router.post("/invoices/:id/save", requireAuth, async (req, res): Promise<void> =
     return;
   }
 
-  // Learn from confirmed data
+  // Learn from confirmed data — pass department so memory boosts this dept next time
   await learnFromSavedInvoice(
     items.map((i: any) => ({ 
       partNumber: i.partNumber ?? null, 
@@ -351,7 +351,8 @@ router.post("/invoices/:id/save", requireAuth, async (req, res): Promise<void> =
       description: i.description,
       packFactor: i.packFactor ?? 1
     })),
-    req.user!.orgId!
+    req.user?.orgId ?? null,
+    req.user?.department ?? undefined
   );
 
   // Log activity
@@ -468,7 +469,7 @@ router.post("/invoices/:id/inject", requireAuth, async (req, res): Promise<void>
                partNumber: parsed.corrected,
                originalPartNumber: oldPart,
                description: parsed.description,
-             }], req.user!.orgId!).catch((err) => {
+             }], req.user?.orgId ?? null, req.user?.department ?? undefined).catch((err) => {
                req.log.error({ err, corrected: parsed.corrected }, "Failed to persist part correction");
              });
 
