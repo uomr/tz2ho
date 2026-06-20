@@ -798,7 +798,7 @@ export default function Invoices() {
                       <Button 
                         variant="ghost" 
                         size="icon" 
-                        className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                        className="h-7 w-7 text-muted-foreground hover:text-foreground hover:bg-muted/60 rounded-md transition-colors"
                         onClick={() => handleOpenDetail(inv.id)}
                         title="عرض التفاصيل"
                       >
@@ -807,8 +807,7 @@ export default function Invoices() {
                       <Button 
                         variant="ghost" 
                         size="icon" 
-                        className="h-8 w-8"
-                        style={{ color: "#3b82f6" }}
+                        className="h-7 w-7 text-muted-foreground hover:text-foreground hover:bg-muted/60 rounded-md transition-colors"
                         onClick={() => handleOpenEdit(inv.id)}
                         title="تعديل الفاتورة"
                       >
@@ -817,8 +816,7 @@ export default function Invoices() {
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-8 w-8"
-                        style={{ color: "hsl(142 55% 42%)" }}
+                        className="h-7 w-7 text-muted-foreground hover:text-foreground hover:bg-muted/60 rounded-md transition-colors"
                         onClick={() => exportExcel(inv.id, inv.invoiceNumber)}
                         title="تصدير Excel"
                       >
@@ -827,8 +825,7 @@ export default function Invoices() {
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-8 w-8"
-                        style={{ color: "hsl(271 55% 60%)" }}
+                        className="h-7 w-7 text-muted-foreground hover:text-foreground hover:bg-muted/60 rounded-md transition-colors"
                         onClick={() => printPDF(inv.id)}
                         title="طباعة / PDF"
                       >
@@ -837,7 +834,7 @@ export default function Invoices() {
                       <Button 
                         variant="ghost" 
                         size="icon" 
-                        className="h-8 w-8 text-destructive hover:bg-destructive/10"
+                        className="h-7 w-7 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-md transition-colors"
                         onClick={() => handleDelete(inv.id)}
                         disabled={deleteInvoice.isPending}
                         title="حذف"
