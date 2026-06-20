@@ -90,9 +90,15 @@ export async function lookupPartByDescription(description: string, orgId: number
   const normDesc = normalizeArabic(description);
   if (!normDesc) return null;
 
-  const allParts = await db.select().from(partsTable).where(or(eq(partsTable.orgId, orgId), isNull(partsTable.orgId)));
+  // نجلب السجلات ونرتّبها: سجلات المنظمة الخاصة أولاً، ثم العامة
+  // هذا يضمن أن التصحيحات الخاصة بالمنظمة تتغلب على البيانات العامة القديمة
+  const allParts = await db
+    .select()
+    .from(partsTable)
+    .where(or(eq(partsTable.orgId, orgId), isNull(partsTable.orgId)))
+    .orderBy(sql`CASE WHEN ${partsTable.orgId} = ${orgId} THEN 0 ELSE 1 END`);
 
-  // 1. تطابق تام
+  // 1. تطابق تام — مع الأولوية لسجلات المنظمة (مرتّبة مسبقاً)
   for (const part of allParts) {
     if (normalizeArabic(part.description) === normDesc) {
       return {
@@ -173,7 +179,13 @@ export async function lookupPartByOriginalPartNumber(originalPartNumber: string,
   if (!originalPartNumber || originalPartNumber.trim().length < 2) return null;
   const rawPart = originalPartNumber.trim().toLowerCase();
 
-  const allParts = await db.select().from(partsTable).where(or(eq(partsTable.orgId, orgId), isNull(partsTable.orgId)));
+  // سجلات المنظمة أولاً، ثم العامة — لضمان أولوية التصحيحات الخاصة
+  const allParts = await db
+    .select()
+    .from(partsTable)
+    .where(or(eq(partsTable.orgId, orgId), isNull(partsTable.orgId)))
+    .orderBy(sql`CASE WHEN ${partsTable.orgId} = ${orgId} THEN 0 ELSE 1 END`);
+
   for (const part of allParts) {
     const storedOrig = (part.originalPartNumber ?? "").trim().toLowerCase();
     const storedAppr = part.partNumber.trim().toLowerCase();
@@ -274,18 +286,21 @@ export async function learnFromSavedInvoice(
     const factor = item.packFactor ?? 1;
 
     try {
-      // FIX: eq(col, null) generates "col = NULL" which NEVER matches in SQL.
-      // Must use isNull() when orgId is null, otherwise corrections are never
-      // found and always inserted as duplicates instead of being updated.
+      // نبحث أولاً عن سجل خاص بالمنظمة، ثم عن سجل عام (null org_id) للبيانات القديمة.
+      // هذا يمنع إنشاء سجلات مكررة ويضمن تحديث البيانات القديمة بالتصحيح الصحيح.
       const orgFilter: SQL =
         orgId === null
           ? isNull(partsTable.orgId)
-          : eq(partsTable.orgId, orgId);
+          : or(eq(partsTable.orgId, orgId), isNull(partsTable.orgId))!;
 
       const existing = await db
         .select()
         .from(partsTable)
         .where(and(ilike(partsTable.description, item.description), orgFilter))
+        .orderBy(
+          // الأولوية: سجل المنظمة أولاً، السجل العام ثانياً
+          sql`CASE WHEN ${partsTable.orgId} IS NOT DISTINCT FROM ${orgId} THEN 0 ELSE 1 END`
+        )
         .limit(1);
 
       // توليد embedding للوصف الجديد
@@ -306,6 +321,12 @@ export async function learnFromSavedInvoice(
           deptUsage: currentDeptUsage,
         };
 
+        // إذا كان السجل القديم بدون orgId (بيانات قديمة)، نعيّن له orgId الحالي
+        // حتى يُعامَل كسجل خاص بالمنظمة في عمليات البحث القادمة
+        if (stored.orgId === null && orgId !== null) {
+          updateData.orgId = orgId;
+        }
+
         // تحديث embedding فقط إذا لم يكن موجوداً أو تولّد جديد
         if (embedding && (!stored.embedding || (stored.embedding as number[]).length === 0)) {
           updateData.embedding = sql`${JSON.stringify(embedding)}::vector`;
@@ -317,7 +338,7 @@ export async function learnFromSavedInvoice(
           .where(eq(partsTable.id, stored.id));
 
         logger.info(
-          { description: item.description, approved: appr, dept: userDept, hasEmbedding: !!embedding },
+          { description: item.description, approved: appr, orgId, wasGlobal: stored.orgId === null, dept: userDept, hasEmbedding: !!embedding },
           "Updated smart part mapping"
         );
       } else {

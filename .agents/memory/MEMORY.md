@@ -1,2 +1,3 @@
 - [OpenRouter vision models — Arabic OCR](openrouter-vision-models.md) — verified 6 models 2026-06-12; Qwen VL series best for Arabic; two Google models had wrong pricing in original code
 - [UI design system — shared components](ui-shared-components.md) — 3 shared components created; all purple/yellow/green hardcoded colors now dual-mode dark:/light: safe
+- [Parts Memory — org priority bug](parts-memory-priority-bug.md) — corrections not remembered: old null-orgId records won lookup race; fix: ORDER BY org priority + learn from global records too
